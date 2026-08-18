@@ -4,19 +4,22 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { chatsRouter } from "../chats";
-import { createCallerFactory } from "../../trpc";
-
 const enabled = !!process.env.PG_INTEGRATION && !!process.env.DATABASE_URL;
 
 describe.skipIf(!enabled)("chats router (postgres)", () => {
-  const createCaller = createCallerFactory(chatsRouter);
   const userId = `user_pg_${Date.now()}`;
   const otherUserId = `user_pg_other_${Date.now()}`;
   const ctx = (uid: string) =>
     ({ db: null as never, userId: uid, headers: new Headers() }) as never;
 
   it("create → list → messages → delete, scoped to the owner", async () => {
+    // Imported lazily: ~/mastra builds a PostgresStore at module load, which
+    // must not happen in the default (no-DB) test run.
+    const [{ chatsRouter }, { createCallerFactory }] = await Promise.all([
+      import("../chats"),
+      import("../../trpc"),
+    ]);
+    const createCaller = createCallerFactory(chatsRouter);
     const mine = createCaller(ctx(userId));
     const theirs = createCaller(ctx(otherUserId));
 
