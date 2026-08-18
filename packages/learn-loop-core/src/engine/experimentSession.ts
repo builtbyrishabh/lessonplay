@@ -1,0 +1,455 @@
+import {
+  isClassifyGoal,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
+  type ExperimentEffect,
+  type ExperimentGame,
+  type ExperimentLevel,
+  type ExperimentReadout,
+  type ExperimentSample,
+  type ExperimentSampleState,
+  type ExperimentVisual,
+} from "../model/experimentLab";
+import {
+  matchesNumericWhen,
+  matchesWhen,
+  runExperimentStep,
+} from "./experimentRules";
+
+/**
+ * The runtime state machine for an ExperimentLab playthrough.
+ *
+ * It drives the cause→effect loop — Predict → Act → Observe → Record → Classify
+ * → Reveal — across a level ladder, and is pure: `(state, event) → state`, no
+ * I/O, never mutating input. The viewport renders from this and dispatches
+ * events; all gameplay rules (prediction binding, the evidence gate on
+ * classifying, graduated hints, level progression) live here so they are
+ * unit-testable without the UI.
+ */
+
+export type ExperimentPhase =
+  | "intro" // level framing shown; awaiting start
+  | "exploring" // free probing: pick a sample + tool
+  | "predicting" // a tool is chosen; awaiting the learner's prediction
+  | "observing" // an effect is shown; awaiting dismissal
+  | "classifying" // assigning samples to categories
+  | "revealed" // correct: identities shown
+  | "complete"; // all levels done
+
+/** One recorded probe: what was done and what was seen. No inference. */
+export interface ExperimentNotebookEntry {
+  readonly sampleId: string;
+  readonly toolId: string;
+  /** For a binary probe, the second operand (sample or reagent id) combined with. */
+  readonly operandId?: string;
+  readonly observationId: string;
+  readonly observation: string;
+  readonly visual: ExperimentVisual;
+  /** Gas chip token carried over from the effect, when the visual is `gas`. */
+  readonly gasLabel?: string;
+  /** Structured reading (colour, pH value, bulb state, …) carried from the effect. */
+  readonly readout?: ExperimentReadout;
+}
+
+/** The just-applied cause: its effect plus whether the prediction was right. */
+export interface ExperimentObservationResult {
+  readonly sampleId: string;
+  readonly toolId: string;
+  /** The second operand combined with, for a binary probe. */
+  readonly operandId?: string;
+  readonly effect: ExperimentEffect;
+  /** The learner's predicted visual, when the level required a prediction. */
+  readonly predictedVisual: ExperimentVisual | null;
+  /** True/false when a prediction was made; null when none was required. */
+  readonly predictionCorrect: boolean | null;
+}
+
+export interface ExperimentClassificationResult {
+  /** All classify samples assigned to their correct category. */
+  readonly correct: boolean;
+  /** Per-sample correctness, keyed by sample id. */
+  readonly perSample: Readonly<Record<string, boolean>>;
+}
+
+export interface ExperimentSessionState {
+  readonly game: ExperimentGame;
+  readonly levelIndex: number;
+  readonly phase: ExperimentPhase;
+  readonly selectedSampleId: string | null;
+  readonly selectedToolId: string | null;
+  /** The chosen second operand for a binary tool (sample or reagent id), else null. */
+  readonly selectedOperandId: string | null;
+  /** Evolving state per sample (carries `setState` from earlier causes). */
+  readonly sampleStates: Readonly<Record<string, ExperimentSampleState>>;
+  readonly notebook: readonly ExperimentNotebookEntry[];
+  readonly lastObservation: ExperimentObservationResult | null;
+  /** Current classify assignments: sampleId → categoryId. */
+  readonly assignments: Readonly<Record<string, string>>;
+  readonly classificationResult: ExperimentClassificationResult | null;
+  /**
+   * Which prompt of a `predict-outcome` goal is active. Advances as each
+   * prediction is made and dismissed; unused by the other goal kinds.
+   */
+  readonly promptIndex: number;
+  readonly hintsRevealed: number;
+  readonly predictionsMade: number;
+  readonly predictionsCorrect: number;
+}
+
+export type ExperimentSessionEvent =
+  | { readonly type: "start-level" }
+  | { readonly type: "select-sample"; readonly sampleId: string }
+  | {
+      readonly type: "select-tool";
+      readonly toolId: string;
+      /** The second operand to combine with, when the tool is binary. */
+      readonly operandId?: string;
+    }
+  | { readonly type: "predict"; readonly visual: ExperimentVisual }
+  | { readonly type: "dismiss-observation" }
+  | { readonly type: "open-classify" }
+  | {
+      readonly type: "assign-category";
+      readonly sampleId: string;
+      readonly categoryId: string;
+    }
+  | { readonly type: "submit-classification" }
+  | { readonly type: "request-hint" }
+  | { readonly type: "next-level" }
+  | { readonly type: "reset" };
+
+export function currentLevel(state: ExperimentSessionState): ExperimentLevel {
+  return state.game.levels[state.levelIndex];
+}
+
+function levelSamples(
+  game: ExperimentGame,
+  level: ExperimentLevel,
+): ExperimentSample[] {
+  return level.sampleIds
+    .map((id) => game.definition.samples.find((s) => s.id === id))
+    .filter((s): s is ExperimentSample => s !== undefined);
+}
+
+function initialSampleStates(
+  game: ExperimentGame,
+  level: ExperimentLevel,
+): Record<string, ExperimentSampleState> {
+  const states: Record<string, ExperimentSampleState> = {};
+  for (const sample of levelSamples(game, level)) {
+    states[sample.id] = { ...sample.properties };
+  }
+  return states;
+}
+
+function enterLevel(
+  game: ExperimentGame,
+  levelIndex: number,
+): ExperimentSessionState {
+  const level = game.levels[levelIndex];
+  return {
+    game,
+    levelIndex,
+    phase: "intro",
+    selectedSampleId: level.sampleIds[0] ?? null,
+    selectedToolId: null,
+    selectedOperandId: null,
+    sampleStates: initialSampleStates(game, level),
+    notebook: [],
+    lastObservation: null,
+    assignments: {},
+    classificationResult: null,
+    promptIndex: 0,
+    hintsRevealed: 0,
+    predictionsMade: 0,
+    predictionsCorrect: 0,
+  };
+}
+
+export function createExperimentSession(
+  game: ExperimentGame,
+): ExperimentSessionState {
+  return enterLevel(game, 0);
+}
+
+/**
+ * The evidence gate: on a `classify` level a learner may only attempt a
+ * classification once every sample they must classify has been probed at least
+ * once. This is what makes the goal unreachable by pure guessing. Always false
+ * for the other goal kinds, which have no classify step.
+ */
+export function canClassify(state: ExperimentSessionState): boolean {
+  const level = currentLevel(state);
+  if (!isClassifyGoal(level.goal)) return false;
+  const probed = new Set(state.notebook.map((entry) => entry.sampleId));
+  return level.goal.classifyIds.every((id) => probed.has(id));
+}
+
+/** The current state of an operand id — an evolving bench sample or a fresh reagent. */
+function operandStateFor(
+  state: ExperimentSessionState,
+  operandId: string,
+): ExperimentSampleState | undefined {
+  const asSample = state.sampleStates[operandId];
+  if (asSample) return asSample;
+  return state.game.definition.reagents?.find((r) => r.id === operandId)
+    ?.properties;
+}
+
+function applyTool(
+  state: ExperimentSessionState,
+  sampleId: string,
+  toolId: string,
+  operandId: string | null,
+  predictedVisual: ExperimentVisual | null,
+): ExperimentSessionState {
+  const ruleSet = state.game.definition.ruleSet;
+  const sampleState = state.sampleStates[sampleId];
+  if (!sampleState) return state;
+
+  const operandState =
+    operandId !== null ? operandStateFor(state, operandId) : undefined;
+  const result = runExperimentStep(sampleState, toolId, ruleSet, operandState);
+  const predictionCorrect =
+    predictedVisual === null ? null : predictedVisual === result.effect.visual;
+
+  const entry: ExperimentNotebookEntry = {
+    sampleId,
+    toolId,
+    operandId: operandId ?? undefined,
+    observationId: result.effect.observationId,
+    observation: result.effect.observation,
+    visual: result.effect.visual,
+    gasLabel: result.effect.gasLabel,
+    readout: result.effect.readout,
+  };
+
+  // Persist the primary sample's next state, plus the operand's if it is a bench
+  // sample the effect mutated (fresh reagents are not persisted).
+  const nextSampleStates: Record<string, ExperimentSampleState> = {
+    ...state.sampleStates,
+    [sampleId]: result.nextState,
+  };
+  if (
+    operandId !== null &&
+    result.nextOperandState !== undefined &&
+    state.sampleStates[operandId] !== undefined
+  ) {
+    nextSampleStates[operandId] = result.nextOperandState;
+  }
+
+  return {
+    ...state,
+    phase: "observing",
+    selectedToolId: toolId,
+    selectedOperandId: operandId,
+    sampleStates: nextSampleStates,
+    notebook: addNotebookEntry(state.notebook, entry),
+    lastObservation: {
+      sampleId,
+      toolId,
+      operandId: operandId ?? undefined,
+      effect: result.effect,
+      predictedVisual,
+      predictionCorrect,
+    },
+    predictionsMade:
+      predictionCorrect === null
+        ? state.predictionsMade
+        : state.predictionsMade + 1,
+    predictionsCorrect:
+      predictionCorrect === true
+        ? state.predictionsCorrect + 1
+        : state.predictionsCorrect,
+  };
+}
+
+export function reduceExperimentSession(
+  state: ExperimentSessionState,
+  event: ExperimentSessionEvent,
+): ExperimentSessionState {
+  const level = currentLevel(state);
+
+  switch (event.type) {
+    case "start-level": {
+      if (state.phase !== "intro") return state;
+      // A predict-outcome goal is a guided walk through its prompts, so it opens
+      // straight into the first prediction rather than free probing.
+      if (isPredictOutcomeGoal(level.goal)) {
+        const first = level.goal.prompts[0];
+        if (!first) return { ...state, phase: "revealed" };
+        return {
+          ...state,
+          phase: "predicting",
+          promptIndex: 0,
+          selectedSampleId: first.sampleId,
+          selectedToolId: first.toolId,
+          selectedOperandId: first.operandId ?? null,
+        };
+      }
+      return { ...state, phase: "exploring" };
+    }
+
+    case "select-sample":
+      if (state.phase !== "exploring") return state;
+      if (!level.sampleIds.includes(event.sampleId)) return state;
+      return { ...state, selectedSampleId: event.sampleId };
+
+    case "select-tool": {
+      if (state.phase !== "exploring") return state;
+      if (!level.toolIds.includes(event.toolId)) return state;
+      if (!state.selectedSampleId) return state;
+      const operandId = event.operandId ?? null;
+      if (level.predictionRequired) {
+        return {
+          ...state,
+          phase: "predicting",
+          selectedToolId: event.toolId,
+          selectedOperandId: operandId,
+        };
+      }
+      return applyTool(
+        state,
+        state.selectedSampleId,
+        event.toolId,
+        operandId,
+        null,
+      );
+    }
+
+    case "predict": {
+      if (state.phase !== "predicting") return state;
+      if (!state.selectedSampleId || !state.selectedToolId) return state;
+      return applyTool(
+        state,
+        state.selectedSampleId,
+        state.selectedToolId,
+        state.selectedOperandId,
+        event.visual,
+      );
+    }
+
+    case "dismiss-observation": {
+      if (state.phase !== "observing") return state;
+      // predict-outcome: advance to the next prompt, or finish when they run out.
+      if (isPredictOutcomeGoal(level.goal)) {
+        const nextIndex = state.promptIndex + 1;
+        const next = level.goal.prompts[nextIndex];
+        if (next) {
+          return {
+            ...state,
+            phase: "predicting",
+            promptIndex: nextIndex,
+            selectedSampleId: next.sampleId,
+            selectedToolId: next.toolId,
+            selectedOperandId: next.operandId ?? null,
+            lastObservation: null,
+          };
+        }
+        return {
+          ...state,
+          phase: "revealed",
+          selectedToolId: null,
+          selectedOperandId: null,
+          lastObservation: null,
+        };
+      }
+      // reach-target-state: win the moment the sample satisfies the target
+      // (both the string target and any numeric condition).
+      if (isReachTargetStateGoal(level.goal)) {
+        const sampleState = state.sampleStates[level.goal.sampleId];
+        if (
+          sampleState &&
+          matchesWhen(sampleState, level.goal.target) &&
+          matchesNumericWhen(sampleState, level.goal.numericTarget)
+        ) {
+          return {
+            ...state,
+            phase: "revealed",
+            selectedToolId: null,
+            selectedOperandId: null,
+            lastObservation: null,
+          };
+        }
+      }
+      return {
+        ...state,
+        phase: "exploring",
+        selectedToolId: null,
+        selectedOperandId: null,
+        lastObservation: null,
+      };
+    }
+
+    case "open-classify":
+      if (state.phase !== "exploring") return state;
+      if (!canClassify(state)) return state;
+      return { ...state, phase: "classifying" };
+
+    case "assign-category": {
+      if (state.phase !== "classifying") return state;
+      const goal = level.goal;
+      if (!isClassifyGoal(goal)) return state;
+      if (!goal.classifyIds.includes(event.sampleId)) return state;
+      if (!goal.categoryIds.includes(event.categoryId)) return state;
+      return {
+        ...state,
+        assignments: { ...state.assignments, [event.sampleId]: event.categoryId },
+        classificationResult: null,
+      };
+    }
+
+    case "submit-classification": {
+      if (state.phase !== "classifying") return state;
+      const goal = level.goal;
+      if (!isClassifyGoal(goal)) return state;
+      const perSample: Record<string, boolean> = {};
+      let allCorrect = true;
+      for (const id of goal.classifyIds) {
+        const sample = state.game.definition.samples.find((s) => s.id === id);
+        const correct = sample
+          ? state.assignments[id] === sample.categoryId
+          : false;
+        perSample[id] = correct;
+        if (!correct) allCorrect = false;
+      }
+      const result: ExperimentClassificationResult = {
+        correct: allCorrect,
+        perSample,
+      };
+      return {
+        ...state,
+        classificationResult: result,
+        phase: allCorrect ? "revealed" : "classifying",
+      };
+    }
+
+    case "request-hint":
+      if (state.hintsRevealed >= level.hints.length) return state;
+      return { ...state, hintsRevealed: state.hintsRevealed + 1 };
+
+    case "next-level":
+      if (state.phase !== "revealed") return state;
+      if (state.levelIndex >= state.game.levels.length - 1) {
+        return { ...state, phase: "complete" };
+      }
+      return enterLevel(state.game, state.levelIndex + 1);
+
+    case "reset":
+      return createExperimentSession(state.game);
+  }
+}
+
+function addNotebookEntry(
+  entries: readonly ExperimentNotebookEntry[],
+  next: ExperimentNotebookEntry,
+): readonly ExperimentNotebookEntry[] {
+  const alreadyRecorded = entries.some(
+    (entry) =>
+      entry.sampleId === next.sampleId &&
+      entry.toolId === next.toolId &&
+      entry.operandId === next.operandId &&
+      entry.observationId === next.observationId,
+  );
+  return alreadyRecorded ? entries : [...entries, next];
+}

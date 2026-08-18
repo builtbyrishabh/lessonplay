@@ -1,0 +1,564 @@
+import { useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import {
+  isClassifyGoal,
+  type ExperimentGame,
+  type ExperimentVisual,
+} from "../model/experimentLab";
+import { Beaker } from "./Beaker";
+import {
+  experimentLabThemeClasses,
+  type ExperimentLabThemeInput,
+} from "./experimentLabTheme";
+import { useExperimentSession } from "./useExperimentSession";
+import {
+  buildRevealPresentation,
+  type ClassifyRevealBeat,
+  type PredictOutcomeRevealBeat,
+  type ReachTargetRevealBeat,
+} from "./revealPresentation";
+import { Icon } from "./icons";
+import { evidenceCellDisplay } from "./evidenceCell";
+
+export interface ExperimentLabViewportProps {
+  /** The complete, validated discovery game to play. */
+  readonly game: ExperimentGame;
+  /** Topbar title; defaults to `game.title`. */
+  readonly title?: string;
+  /** Body copy on the final "case closed" screen. */
+  readonly completionMessage?: string;
+  /**
+   * Optional visual skin. Picks palette (background) / accent (the Tyndall beam
+   * colour) / intensity (glow strength). Unknown tokens fall back to the
+   * dark-glow default (night-lab / cyan / standard). Omit it for that default.
+   */
+  readonly theme?: ExperimentLabThemeInput;
+}
+
+/** How each possible effect reads as a "what will happen?" prediction choice. */
+const PREDICT_LABEL: Record<ExperimentVisual, string> = {
+  beam: "A beam lights up",
+  settle: "It settles and sinks",
+  residue: "Residue is left behind",
+  fizz: "It fizzes",
+  "color-change": "The colour changes",
+  gas: "Gas bubbles off",
+  precipitate: "It turns milky",
+  conductivity: "The bulb glows",
+  temperature: "It heats up or cools",
+  "ph-scale": "The pH strip changes colour",
+  odour: "A smell is released",
+  measure: "The reading changes",
+  none: "Nothing changes",
+};
+
+const DEFAULT_COMPLETION =
+  "You sorted every sample by reading the evidence — not by guessing.";
+
+/**
+ * The reusable cause→effect discovery surface for an {@link ExperimentGame}.
+ *
+ * Render a whole game with `<ExperimentLabViewport game={game} />`: it owns the
+ * full 9:16 dark-glow frame, the hero {@link Beaker} with its Tyndall beam and
+ * settle/residue animations, the live observe-and-record loop, the sample × tool
+ * readings grid, and the classify → reveal payoff. All gameplay logic comes from
+ * the tested session reducer via {@link useExperimentSession}; this component is
+ * presentation only. Skin it with the optional `theme` prop.
+ */
+export function ExperimentLabViewport({
+  game,
+  title,
+  completionMessage = DEFAULT_COMPLETION,
+  theme,
+}: ExperimentLabViewportProps) {
+  const session = useExperimentSession(game);
+  const { state, level } = session;
+  const goal = level.goal;
+
+  // Hints are shown in a dismissible modal so they never cover the bench and can
+  // always be closed. Local UI state — revealed-hint count still lives in the
+  // session reducer; this only tracks whether the panel is open.
+  const [hintsOpen, setHintsOpen] = useState(false);
+  const hintsAvailable = session.interactive || session.predicting;
+
+  const categoryById = useMemo(
+    () => new Map(game.categories.map((c) => [c.id, c])),
+    [game.categories],
+  );
+
+  // The Tyndall lamp is apparatus, not decoration: only draw it for games that
+  // actually scatter light. An acid/base bench never fires a beam, so the lamp
+  // would just be a stray box beside the glass.
+  const usesBeam = useMemo(() => {
+    const { ruleSet } = game.definition;
+    return (
+      ruleSet.defaultEffect.visual === "beam" ||
+      ruleSet.rules.some((rule) => rule.effect.visual === "beam")
+    );
+  }, [game.definition]);
+
+  // The staged "aha moment" payoff, derived by the pure, tested reveal model. The
+  // viewport is a shallow shell over it: it only stages (CSS per-beat delay) and
+  // styles the beats, never re-deriving the goal-kind branching here.
+  const reveal = useMemo(
+    () =>
+      buildRevealPresentation(goal, game.categories, {
+        sampleById: session.sampleById,
+        predictionScore: session.predictionScore,
+        targetLabel: session.targetLabel,
+        isLastLevel: state.levelIndex >= game.levels.length - 1,
+      }),
+    [
+      goal,
+      game.categories,
+      game.levels.length,
+      session.sampleById,
+      session.predictionScore,
+      session.targetLabel,
+      state.levelIndex,
+    ],
+  );
+  const nextLabel = reveal.isLastLevel ? "Finish" : "Next case";
+
+  const toolShort = (toolId: string): string => {
+    const tool = game.definition.tools.find((t) => t.id === toolId);
+    if (!tool) return toolId;
+    // Last word of the label reads well as a column header ("Side light" →
+    // "light", "Let it stand" → "stand", "Filter" → "filter").
+    return tool.label.split(" ").pop()?.toLowerCase() ?? toolId;
+  };
+
+  return (
+    <div className={`experiment-lab-app ${experimentLabThemeClasses(theme)}`}>
+      <header className="topbar">
+        <span className="topbar__title">{title ?? game.title}</span>
+        <span className="topbar__level">
+          {state.phase === "complete"
+            ? "Solved"
+            : `Case ${state.levelIndex + 1} / ${game.levels.length}`}
+        </span>
+      </header>
+
+      <main className="stage">
+        <div className="stage__label">{session.selectedSample?.label ?? "—"}</div>
+        {session.goalKind === "reach-target-state" && session.targetLabel && (
+          <div className="stage__objective">
+            <Icon id="objective" className="stage__objective-icon" decorative />
+            {session.targetLabel}
+          </div>
+        )}
+        {session.goalKind === "predict-outcome" &&
+          session.promptProgress.total > 0 && (
+            <div className="stage__objective">
+              Prediction{" "}
+              {Math.min(
+                session.promptProgress.index + 1,
+                session.promptProgress.total,
+              )}{" "}
+              of {session.promptProgress.total}
+            </div>
+          )}
+        <Beaker
+          visual={session.activeVisual}
+          cloudy={session.cloudy}
+          animating={session.busy}
+          gasLabel={session.activeGasLabel}
+          readout={session.activeReadout}
+          showLamp={usesBeam}
+        />
+        <p className={`reading ${session.busy ? "is-live" : ""}`}>
+          {session.reading ?? "Pick a tool below to test this sample."}
+        </p>
+        {session.predictionOutcome && (
+          <p className={`predict-verdict is-${session.predictionOutcome}`}>
+            <Icon
+              id={
+                session.predictionOutcome === "correct"
+                  ? "verdict-correct"
+                  : "verdict-wrong"
+              }
+              className="predict-verdict__icon"
+              decorative
+            />
+            {session.predictionOutcome === "correct"
+              ? "You called it."
+              : "Not what you predicted — now you know."}
+          </p>
+        )}
+      </main>
+
+      {/* Free-probe tools. A predict-outcome level is prompt-driven (the tool is
+          named by each prompt), so its bench hides the picker. */}
+      {session.goalKind !== "predict-outcome" && (
+      <section className="tools" aria-label="Tools">
+        {level.toolIds.map((id) => {
+          const t = game.definition.tools.find((tool) => tool.id === id);
+          if (!t) return null;
+          return (
+            <button
+              key={id}
+              className="tool"
+              disabled={!session.interactive || !state.selectedSampleId}
+              onClick={() => session.selectTool(id)}
+            >
+              <Icon id={id} className="tool__icon" decorative />
+              <span className="tool__label">{t.label}</span>
+            </button>
+          );
+        })}
+      </section>
+      )}
+
+      {/* The readings grid — the surface you reason from. */}
+      <section
+        className="grid"
+        aria-label="Lab notebook"
+        style={{ ["--cols" as string]: level.toolIds.length }}
+      >
+        <div className="grid__row grid__row--head">
+          <span className="grid__name">Lab notes</span>
+          {level.toolIds.map((tid) => (
+            <span key={tid} className="grid__col">
+              {toolShort(tid)}
+            </span>
+          ))}
+        </div>
+        {level.sampleIds.map((sid) => {
+          const s = session.sampleById.get(sid);
+          if (!s) return null;
+          return (
+            <button
+              key={sid}
+              className={`grid__row ${
+                sid === state.selectedSampleId ? "is-active" : ""
+              }`}
+              disabled={!session.interactive}
+              onClick={() => session.selectSample(sid)}
+            >
+              <span className="grid__name">{s.label}</span>
+              {level.toolIds.map((tid) => {
+                // One pure, tested derivation: structured readout value → gas
+                // token → per-visual word → empty marker. Text is always present
+                // so colour is never the only signal.
+                const cell = evidenceCellDisplay(session.readingFor(sid, tid));
+                return (
+                  <span key={tid} className={`gcell ${cell.cls}`}>
+                    {cell.value}
+                  </span>
+                );
+              })}
+            </button>
+          );
+        })}
+      </section>
+
+      <footer className="actions">
+        {level.hints.length > 0 && (
+          <button
+            className="btn btn--ghost"
+            disabled={!hintsAvailable}
+            onClick={() => {
+              // Reveal the first hint on the first open; reopening just re-shows
+              // what's already been unlocked.
+              if (state.hintsRevealed === 0) session.requestHint();
+              setHintsOpen(true);
+            }}
+          >
+            Hint
+          </button>
+        )}
+        {session.goalKind === "classify" && (
+          <button
+            className="btn btn--primary"
+            disabled={!session.interactive || !session.canClassify}
+            onClick={session.openClassify}
+          >
+            {session.canClassify ? "Make the call" : "Test every unknown first"}
+          </button>
+        )}
+        {session.goalKind === "reach-target-state" && (
+          <span className="actions__status">
+            Keep acting until the goal is met.
+          </span>
+        )}
+        {session.goalKind === "predict-outcome" && (
+          <span className="actions__status">
+            {session.predictionScore.correct} right so far
+          </span>
+        )}
+      </footer>
+
+      {hintsOpen && hintsAvailable && state.hintsRevealed > 0 && (
+        <Overlay>
+          <h2 className="card__title">Hints</h2>
+          <div className="hints">
+            {level.hints.slice(0, state.hintsRevealed).map((h) => (
+              <p key={h.id} className="hints__line">
+                <Icon id="hint" className="hints__icon" decorative />
+                <span>{h.text}</span>
+              </p>
+            ))}
+          </div>
+          {state.hintsRevealed < level.hints.length && (
+            <button
+              className="btn btn--ghost btn--block"
+              onClick={session.requestHint}
+            >
+              Show another hint
+            </button>
+          )}
+          <button
+            className="btn btn--primary btn--block"
+            onClick={() => setHintsOpen(false)}
+          >
+            Got it
+          </button>
+        </Overlay>
+      )}
+
+      {/* ---- Overlays: framing, the call, and the payoff (no quiz) ---- */}
+      {state.phase === "intro" && (
+        <Overlay>
+          <h1 className="card__title">{level.title}</h1>
+          <p className="card__body">{level.intro}</p>
+          <button
+            className="btn btn--primary btn--block"
+            onClick={session.startLevel}
+          >
+            {state.levelIndex === 0 ? "Enter the lab" : "Open the case"}
+          </button>
+        </Overlay>
+      )}
+
+      {/* Binary tools ask which second operand to combine with before they act. */}
+      {session.awaitingOperand && (
+        <Overlay>
+          <h2 className="card__title">Combine with…</h2>
+          <p className="card__hint">
+            What should <strong>{session.selectedSample?.label}</strong> meet?
+          </p>
+          <div className="predict predict--operand">
+            {session.operandChoices.map((o) => (
+              <button
+                key={o.id}
+                className="pill pill--predict"
+                onClick={() => session.selectOperand(o.id)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="btn btn--ghost btn--block"
+            onClick={session.cancelOperand}
+          >
+            Back
+          </button>
+        </Overlay>
+      )}
+
+      {state.phase === "predicting" && (
+        <Overlay>
+          <h2 className="card__title">Predict first</h2>
+          <p className="card__hint">
+            What will <strong>{session.selectedTool?.label}</strong> do to{" "}
+            {session.selectedSample?.label}?
+          </p>
+          <div className="predict">
+            {session.predictChoices.map((v) => (
+              <button
+                key={v}
+                className="pill pill--predict"
+                onClick={() => session.predict(v)}
+              >
+                {PREDICT_LABEL[v]}
+              </button>
+            ))}
+          </div>
+        </Overlay>
+      )}
+
+      {state.phase === "classifying" && isClassifyGoal(goal) && (
+        <Overlay wide>
+          <h2 className="card__title">What is each one?</h2>
+          <p className="card__hint">Read your notes and decide.</p>
+          <div className="classify">
+            {goal.classifyIds.map((id) => {
+              const s = session.sampleById.get(id);
+              if (!s) return null;
+              const wrong =
+                state.classificationResult?.perSample[id] === false;
+              return (
+                <div
+                  key={id}
+                  className={`classify__row ${wrong ? "is-wrong" : ""}`}
+                >
+                  <span className="classify__name">{s.label}</span>
+                  <div className="classify__opts">
+                    {goal.categoryIds.map((cid) => (
+                      <button
+                        key={cid}
+                        className={`pill ${
+                          state.assignments[id] === cid ? "is-chosen" : ""
+                        }`}
+                        onClick={() => session.assignCategory(id, cid)}
+                      >
+                        {categoryById.get(cid)?.label ?? cid}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {state.classificationResult?.correct === false && (
+            <p className="verdict is-surprise">
+              Not quite. The highlighted ones don&apos;t fit yet — check your
+              notes.
+            </p>
+          )}
+          <button
+            className="btn btn--primary btn--block"
+            disabled={goal.classifyIds.some((id) => !state.assignments[id])}
+            onClick={session.submitClassification}
+          >
+            Submit
+          </button>
+        </Overlay>
+      )}
+
+      {state.phase === "revealed" && (
+        <Overlay wide>
+          {/* The staged discovery payoff. The headline credits the learner's
+              reasoning; each beat enters in sequence (CSS per-index delay); the
+              withheld concept lands last, emphasized, as the trophy. */}
+          <h2 className="card__title reveal__headline">{reveal.headline}</h2>
+          {level.outro && <p className="card__body">{level.outro}</p>}
+          <div className="reveal" aria-label="Reveal">
+            {reveal.beats.map((beat, index) => (
+              <RevealBeatRow key={beatKey(beat, index)} beat={beat} index={index} />
+            ))}
+          </div>
+          <button
+            className="btn btn--primary btn--block"
+            onClick={session.nextLevel}
+          >
+            {nextLabel}
+          </button>
+        </Overlay>
+      )}
+
+      {state.phase === "complete" && (
+        <Overlay>
+          <div className="complete">
+            {/* On-brand beam-sweep finale (dark-glow, never confetti). */}
+            <div className="complete__sweep" aria-hidden />
+            <div className="complete__beam" aria-hidden>
+              <Icon id="complete" className="complete__beam-icon" decorative />
+            </div>
+            <h1 className="card__title">Case closed</h1>
+            <p className="card__body">{completionMessage}</p>
+            <button
+              className="btn btn--primary btn--block"
+              onClick={session.reset}
+            >
+              Play again
+            </button>
+          </div>
+        </Overlay>
+      )}
+    </div>
+  );
+}
+
+/** A stable render key for a beat (the sample id for classify, kind otherwise). */
+function beatKey(
+  beat: ClassifyRevealBeat | PredictOutcomeRevealBeat | ReachTargetRevealBeat,
+  index: number,
+): string {
+  return beat.kind === "classify" ? beat.id : `${beat.kind}-${index}`;
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled reveal beat: ${JSON.stringify(value)}`);
+}
+
+/**
+ * One staged reveal beat. `--beat-index` (set inline) drives the CSS entrance
+ * delay so staging is pure presentation with no timers or extra React state. The
+ * markup per kind preserves the on-screen strings behavior relies on: the concept
+ * label, the reveal label, the score line, the target-reached line.
+ */
+function RevealBeatRow({
+  beat,
+  index,
+}: {
+  readonly beat:
+    | ClassifyRevealBeat
+    | PredictOutcomeRevealBeat
+    | ReachTargetRevealBeat;
+  readonly index: number;
+}) {
+  const style = { ["--beat-index" as string]: index } as CSSProperties;
+
+  if (beat.kind === "classify") {
+    return (
+      <div className="reveal__row" style={style}>
+        <div className="reveal__head">
+          <strong>{beat.sampleLabel}</strong>
+          {beat.revealLabel && (
+            <span className="reveal__real">{beat.revealLabel}</span>
+          )}
+        </div>
+        {/* The withheld concept, granted last, emphasized as the trophy. */}
+        <div className="reveal__cat">{beat.categoryLabel}</div>
+        {beat.definition && <p className="reveal__def">{beat.definition}</p>}
+      </div>
+    );
+  }
+
+  if (beat.kind === "predict-outcome") {
+    return (
+      <div
+        className={`reveal__row reveal__row--score ${
+          beat.perfect ? "is-perfect" : ""
+        }`}
+        style={style}
+      >
+        <div className="reveal__score">
+          You called <strong>{beat.correct}</strong> of {beat.total} right.
+        </div>
+        {beat.perfect && <div className="reveal__cat">A perfect read.</div>}
+      </div>
+    );
+  }
+
+  if (beat.kind === "reach-target-state") {
+    return (
+      <div className="reveal__row reveal__row--target" style={style}>
+        <div className="reveal__cat">
+          <span>
+            Target reached{beat.targetLabel ? `: ${beat.targetLabel}` : ""}
+          </span>
+          <Icon id="verdict-correct" className="reveal__cat-icon" decorative />
+        </div>
+      </div>
+    );
+  }
+
+  return assertNever(beat);
+}
+
+function Overlay({
+  children,
+  wide,
+}: {
+  readonly children: ReactNode;
+  readonly wide?: boolean;
+}) {
+  return (
+    <div className="overlay">
+      <div className={`card ${wide ? "card--wide" : ""}`}>{children}</div>
+    </div>
+  );
+}

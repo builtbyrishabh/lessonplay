@@ -1,0 +1,19 @@
+{
+  "name": "lessonplay-workspace",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "LessonPlay educational-game studio and shared learning-game packages.",
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspace @lessonplay/web",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "workspaces": [
+    "packages/*",
+    "games/chemistry-lab-bench",
+    "apps/*"
+  ]
+}

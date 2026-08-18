@@ -1,0 +1,42 @@
+LessonPlay
+Copyright 2026 Rishabh Singh
+
+This product includes software developed by third parties, as described below.
+
+--------------------------------------------------------------------------------
+Vercel v0 clone example
+--------------------------------------------------------------------------------
+
+The LessonPlay product application in `my-app/` began from Vercel's v0 clone
+example, licensed under the Apache License, Version 2.0.
+
+    Copyright Vercel, Inc.
+    Licensed under the Apache License, Version 2.0.
+
+The current application has substantially replaced the original generation
+backend and product workflow, but portions of the original scaffolding remain.
+
+--------------------------------------------------------------------------------
+abagames/claude-one-button-game-creation
+--------------------------------------------------------------------------------
+
+Earlier revisions of this repository carried one-button game-design skills and a
+genetic-algorithm balance harness adapted from:
+
+    https://github.com/abagames/claude-one-button-game-creation
+
+    Copyright abagames.
+
+Those skills and that harness were removed when the product narrowed to
+chemistry, so no code derived from that project remains in the current tree. The
+attribution is retained here because it applies to this repository's history.
+See that project's LICENSE for its terms.
+
+--------------------------------------------------------------------------------
+Educational source material
+--------------------------------------------------------------------------------
+
+Chemistry and science game content references NCERT textbook chapters and
+classroom activities for educational purposes. NCERT retains copyright in its
+own textbook material; this repository contains original game content inspired
+by those chapters rather than reproductions of textbook text.
