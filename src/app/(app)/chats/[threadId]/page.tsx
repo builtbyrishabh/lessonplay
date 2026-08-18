@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { notFound } from "next/navigation";
 
-import { Chat } from "~/components/chat/chat";
+import { ChatWorkspace } from "~/components/chat/chat-workspace";
 import { api } from "~/trpc/server";
 
 export default async function ChatPage({
@@ -19,5 +19,12 @@ export default async function ChatPage({
     throw err;
   }
 
-  return <Chat threadId={threadId} initialMessages={data.messages} />;
+  return (
+    <ChatWorkspace
+      key={threadId}
+      messages={data.messages}
+      threadId={threadId}
+      title={data.thread.title}
+    />
+  );
 }

@@ -55,6 +55,20 @@ export const chatsRouter = createTRPCRouter({
       };
     }),
 
+  rename: protectedProcedure
+    .input(
+      z.object({ threadId: threadIdSchema, title: z.string().trim().min(1).max(200) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const memory = getLessonMemory();
+      const thread = await memory.getThreadById({ threadId: input.threadId });
+      if (!thread || thread.resourceId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      await memory.updateThread({ id: input.threadId, title: input.title });
+      return { ok: true };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ threadId: threadIdSchema }))
     .mutation(async ({ ctx, input }) => {

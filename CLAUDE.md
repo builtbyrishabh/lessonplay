@@ -17,9 +17,16 @@ T3 stack at the repo root: Next.js App Router + tRPC + Drizzle (Postgres) + Cler
 Slice plan: 1) chatbot (threads, streaming, memory) → 2) sandbox + skills + engine
 tools + publish gate → 3) deploy.
 
-UI: shadcn (radix-nova) + ai-elements (`conversation`, `message`, `prompt-input`,
-`reasoning`, `shimmer`) in `src/components/ai-elements`; chat UI in `src/components/chat`.
+UI: ported from Vercel's v0-clone (`create-v0-sdk-app -e v0-clone`) onto shadcn (radix-nova)
++ ai-elements. Geist font + geist-icons only (`src/lib/icons.ts`), next-themes.
+- `src/app/(app)/` — route group wrapped in `AppShell` (collapsible sidebar); sign-in/up stay bare.
+- `components/layout/` app-shell, sidebar (tRPC `chats.list`), chat-item (rename/delete)
+- `components/home/home-client.tsx` — landing prompt; creates a thread, hands the first
+  prompt off via sessionStorage (`lib/pending-prompt.ts`), navigates to `/chats/[id]`
+- `components/chat/` chat-workspace (v0 split layout; right pane reserved for game preview),
+  chat-header, chat-conversation (`useChat`), message-parts; `components/prompt-box.tsx`
 Client sends only the newest user message (`prepareSendMessagesRequest`); Memory holds history.
+Model choice lives in localStorage (`lib/hooks/use-settings.ts`) and is sent in the body.
 
 Checks: `npm run typecheck`; `npm test` (factory tests, in-memory);
 `PG_INTEGRATION=1 DATABASE_URL=... npx vitest run chats.pg` (real Postgres);
