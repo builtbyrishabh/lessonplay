@@ -4,14 +4,19 @@
  */
 export const LESSON_MODELS = [
   {
-    id: "vercel/anthropic/claude-sonnet-4.5",
-    label: "Sonnet",
-    description: "Default. Fast and capable.",
+    id: "vercel/openai/gpt-5.6-luna",
+    label: "GPT 5.6 Luna",
+    description: "Default. Thinks it through.",
   },
   {
-    id: "vercel/anthropic/claude-opus-4.5",
-    label: "Opus",
-    description: "Slower, more careful.",
+    id: "vercel/meta/muse-spark-1.2-contributor",
+    label: "Muse Spark 1.2",
+    description: "Meta contributor model.",
+  },
+  {
+    id: "vercel/xai/grok-4.6",
+    label: "Grok 4.6",
+    description: "xAI's latest.",
   },
 ] as const;
 
