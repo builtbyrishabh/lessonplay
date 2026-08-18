@@ -18,14 +18,16 @@ import {
 export const maxDuration = 300;
 
 type ChatRequestBody = {
-  messages: UIMessage[];
+  /** Only the newest user message; history is loaded from Mastra Memory. */
+  message: UIMessage;
   threadId: string;
   model?: unknown;
 };
 
 /**
- * Streaming bridge: AI SDK UIMessages in → Mastra agent → UIMessage stream out.
- * Protocol translation only; agent assembly lives in the factory.
+ * Streaming bridge: one new UIMessage in → Mastra agent (history from Memory)
+ * → UIMessage stream out. Protocol translation only; agent assembly lives in
+ * the factory.
  */
 export async function POST(req: Request) {
   const requestStartedAt = performance.now();
@@ -50,20 +52,20 @@ export async function POST(req: Request) {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const { messages, threadId } = body;
+  const { message, threadId } = body;
   if (!isValidThreadId(threadId)) {
     return new Response("threadId is invalid", { status: 400 });
   }
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return new Response("messages are required", { status: 400 });
+  if (!message || message.role !== "user" || !Array.isArray(message.parts)) {
+    return new Response("a user message is required", { status: 400 });
   }
 
   const model = resolveLessonModel(body.model);
-  log("request.parsed", { threadId, model, messageCount: messages.length });
+  log("request.parsed", { threadId, model });
 
   const [agent, modelMessages] = await Promise.all([
     createLessonAgent({ threadId, userId, model, trace: { id: traceId, log } }),
-    convertToModelMessages(messages),
+    convertToModelMessages([message]),
   ]);
 
   const streamStartedAt = performance.now();
@@ -83,13 +85,15 @@ export async function POST(req: Request) {
       log("agent.stream.finish", {
         durationMs: Math.round(performance.now() - streamStartedAt),
         finishReason: event.finishReason,
-        usage: event.usage,
+        steps: event.steps.length,
+        totalUsage: event.totalUsage,
+        runId: event.runId,
       });
     },
   });
 
   const uiMessageStream = createUIMessageStream({
-    originalMessages: messages,
+    originalMessages: [message],
     onError: (error) => {
       log("ui_stream.error", {
         error: error instanceof Error ? error.message : String(error),

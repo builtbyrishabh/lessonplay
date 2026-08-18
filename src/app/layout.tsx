@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
+import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -24,7 +25,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className={`${geist.variable}`}>
         <body>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TRPCReactProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </TRPCReactProvider>
         </body>
       </html>
     </ClerkProvider>

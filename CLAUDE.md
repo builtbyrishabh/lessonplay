@@ -17,5 +17,12 @@ T3 stack at the repo root: Next.js App Router + tRPC + Drizzle (Postgres) + Cler
 Slice plan: 1) chatbot (threads, streaming, memory) → 2) sandbox + skills + engine
 tools + publish gate → 3) deploy.
 
-Checks: `npm run typecheck` (app); `cd game-engine && npm test` (engine).
-Env: `cp .env.example .env`, `./start-database.sh` for local Postgres.
+UI: shadcn (radix-nova) + ai-elements (`conversation`, `message`, `prompt-input`,
+`reasoning`, `shimmer`) in `src/components/ai-elements`; chat UI in `src/components/chat`.
+Client sends only the newest user message (`prepareSendMessagesRequest`); Memory holds history.
+
+Checks: `npm run typecheck`; `npm test` (factory tests, in-memory);
+`PG_INTEGRATION=1 DATABASE_URL=... npx vitest run chats.pg` (real Postgres);
+`cd game-engine && npm test` (engine).
+Env: `cp .env.example .env`, `./start-database.sh` for local Postgres (port 5433 —
+5432 is commonly taken on this machine).

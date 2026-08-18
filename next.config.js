@@ -5,6 +5,9 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  // Mastra ships Node-only code with dynamic requires; keep it out of the webpack bundle.
+  serverExternalPackages: ["@mastra/*"],
+};
 
 export default config;

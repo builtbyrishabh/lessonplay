@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import type { MastraModelConfig } from "@mastra/core/llm";
 
 import { mastra } from "~/mastra";
 import { getLessonMemory } from "./lesson-memory";
@@ -13,7 +14,8 @@ export type CreateLessonAgentOptions = {
   threadId: string;
   /** Clerk userId — used as the Memory resourceId. */
   userId: string;
-  model?: LessonModel;
+  /** Gateway model id, or a model instance (tests). */
+  model?: LessonModel | MastraModelConfig;
   trace?: LessonTrace;
 };
 
