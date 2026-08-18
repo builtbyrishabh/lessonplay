@@ -30,6 +30,6 @@ Model choice lives in localStorage (`lib/hooks/use-settings.ts`) and is sent in 
 
 Checks: `pnpm typecheck`; `pnpm test` (factory tests, in-memory);
 `PG_INTEGRATION=1 DATABASE_URL=... npx vitest run chats.pg` (real Postgres);
-`cd game-engine && pnpm test` (engine).
+`cd game-engine && npm test` (engine).
 Env: `cp .env.example .env`, `./start-database.sh` for local Postgres (port 5433 —
 5432 is commonly taken on this machine).

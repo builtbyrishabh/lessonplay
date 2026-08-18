@@ -11,7 +11,7 @@ dependency graph — it is copied into a sandbox and installed there.
 ```
 src/                  Next.js App Router, tRPC, Drizzle, Mastra agents (src/mastra)
 game-engine/          Self-contained: @learn-loop/core engine + chemistry-lab-bench template
-                      (own package.json/lockfile; `cd game-engine && pnpm install && pnpm test`)
+                      (own package.json/lockfile; `cd game-engine && npm install && npm test`)
 .agents/skills/       Chemistry game-design skills (mirrored to .claude/skills)
 ```
 
@@ -28,5 +28,5 @@ pnpm dev
 
 ```bash
 pnpm typecheck                                  # app
-cd game-engine && pnpm install && pnpm test          # engine (standalone)
+cd game-engine && npm install && npm test          # engine (standalone)
 ```
