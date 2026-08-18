@@ -1,0 +1,6 @@
+# Single package at the root; game-engine/ is intentionally NOT a workspace
+# member (it is installed standalone inside the sandbox).
+packages: []
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

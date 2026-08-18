@@ -28,8 +28,8 @@ UI: ported from Vercel's v0-clone (`create-v0-sdk-app -e v0-clone`) onto shadcn 
 Client sends only the newest user message (`prepareSendMessagesRequest`); Memory holds history.
 Model choice lives in localStorage (`lib/hooks/use-settings.ts`) and is sent in the body.
 
-Checks: `npm run typecheck`; `npm test` (factory tests, in-memory);
+Checks: `pnpm typecheck`; `pnpm test` (factory tests, in-memory);
 `PG_INTEGRATION=1 DATABASE_URL=... npx vitest run chats.pg` (real Postgres);
-`cd game-engine && npm test` (engine).
+`cd game-engine && pnpm test` (engine).
 Env: `cp .env.example .env`, `./start-database.sh` for local Postgres (port 5433 —
 5432 is commonly taken on this machine).
