@@ -1,12 +1,21 @@
 # LessonPlay — chemistry learning-game studio
 
-Monorepo (npm workspaces):
+T3 stack at the repo root: Next.js App Router + tRPC + Drizzle (Postgres) + Clerk + Tailwind.
 
-- `apps/web` — T3 stack (Next.js + tRPC + Drizzle/Postgres + Clerk). Mastra chat agent built factory-style; see `apps/web/CLAUDE.md`.
-- `packages/learn-loop-core` — `@learn-loop/core` engine: ExperimentLab + ChemQuest Lab models, validators (`validateExperimentMission`, `validateSandboxLabMission`), solvers, viewports.
-- `games/chemistry-lab-bench` — only checked-in game; a thin template consuming the engine. Do not expand it.
-- `.agents/skills` (mirrored byte-identical to `.claude/skills`) — `discovery-game-planner`, `experiment-lab-game`, `chemquest-lab-game`.
+- Auth: Clerk. `src/middleware.ts` protects everything except `/sign-in`, `/sign-up`.
+  tRPC context exposes `userId`; use `protectedProcedure` for user-scoped work.
+- Chat: Mastra agent built **factory-style** in `src/mastra/agents/`, streamed to
+  `useChat` via a route handler (slice 1). Mastra Memory uses `@mastra/pg` on the
+  same `DATABASE_URL`; Drizzle only models app tables.
+- `game-engine/` is a self-contained folder (own package.json + lockfile) holding
+  `@learn-loop/core` and the `chemistry-lab-bench` template. It is excluded from the
+  app's tsconfig and never imported in-process — the agent copies it into a sandbox
+  and runs install/test/build there.
+- `.agents/skills` (mirrored byte-identical to `.claude/skills`): `discovery-game-planner`,
+  `experiment-lab-game`, `chemquest-lab-game`.
 
-Checks: `npm test && npm run typecheck` from root.
+Slice plan: 1) chatbot (threads, streaming, memory) → 2) sandbox + skills + engine
+tools + publish gate → 3) deploy.
 
-Slice plan: 1) chatbot (threads, streaming, memory) → 2) skills + engine tools + publish gate → 3) deploy.
+Checks: `npm run typecheck` (app); `cd game-engine && npm test` (engine).
+Env: `cp .env.example .env`, `./start-database.sh` for local Postgres.
