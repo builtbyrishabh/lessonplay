@@ -29,7 +29,12 @@ function textStreamModel(reply: string) {
               type: "finish",
               finishReason: { unified: "stop", raw: "stop" },
               usage: {
-                inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+                inputTokens: {
+                  total: 5,
+                  noCache: 5,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                },
                 outputTokens: { total: 3, text: 3, reasoning: 0 },
               },
             });
@@ -111,5 +116,44 @@ describe("createLessonAgent", () => {
       trace: { id: "t", log: (e) => events.push(e) },
     });
     expect(events).toEqual(["agent.build.start", "agent.build.end"]);
+  });
+});
+
+// Both agents below are built WITHOUT a sandboxPromise. Skills resolving here
+// is the point of serving them from the app instead of a snapshot: the
+// planner-only agent gets them, and nothing waits on a sandbox boot.
+describe("skills", () => {
+  it("resolves every skill directory in .agents/skills", async () => {
+    const agent = await createLessonAgent({
+      threadId: "t-skills",
+      userId: "u1",
+      model: textStreamModel("ok"),
+    });
+
+    const skills = await agent.listSkills();
+    expect(skills.map((s) => s.name).sort()).toEqual([
+      "chemquest-lab-game",
+      "discovery-game-planner",
+      "experiment-lab-game",
+    ]);
+    // The description is all the model sees before choosing one, so an empty
+    // one would make the skill effectively invisible.
+    for (const skill of skills) {
+      expect(skill.description.length).toBeGreaterThan(40);
+    }
+  });
+
+  it("reads a skill's instructions through Mastra, not a hand-rolled loader", async () => {
+    const agent = await createLessonAgent({
+      threadId: "t-skills-2",
+      userId: "u1",
+      model: textStreamModel("ok"),
+    });
+
+    const skill = await agent.getSkill("experiment-lab-game");
+    expect(skill).toBeTruthy();
+    // Front matter stripped, body intact.
+    expect(skill!.instructions).toContain("# ExperimentLab Game");
+    expect(skill!.instructions.startsWith("---")).toBe(false);
   });
 });

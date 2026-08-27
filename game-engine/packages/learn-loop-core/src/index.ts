@@ -157,6 +157,11 @@ export {
 } from "./engine/solveSandboxLabMission";
 export { validateSandboxLabMission } from "./engine/validateSandboxLabMission";
 export {
+  replaySandboxLabMission,
+  replaySandboxLabMissionResult,
+  type SandboxLabReplayResult,
+} from "./engine/replaySandboxLab";
+export {
   matchesWhen,
   matchesNumericWhen,
   evaluateComparison,
@@ -186,6 +191,11 @@ export {
   validateExperimentGame,
   validateExperimentMission,
 } from "./engine/validateExperimentGame";
+export {
+  replayExperimentGame,
+  replayExperimentGameResult,
+  type ExperimentReplayResult,
+} from "./engine/replayExperiment";
 export {
   createExperimentSession,
   reduceExperimentSession,

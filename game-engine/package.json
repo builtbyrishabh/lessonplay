@@ -12,5 +12,8 @@
   "workspaces": [
     "packages/*",
     "games/chemistry-lab-bench"
-  ]
+  ],
+  "devDependencies": {
+    "tsx": "^4.23.12"
+  }
 }

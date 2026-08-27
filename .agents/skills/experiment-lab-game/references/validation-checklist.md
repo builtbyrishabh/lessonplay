@@ -1,20 +1,33 @@
 # Validation Checklist
 
-## Build-time gates
+## Build-time gate
 
-Validate the authored `ExperimentGame` with the headless gates from
-`@learn-loop/core` before reporting completion:
+**Run the `validate` tool.** It is the gate — it runs everything below inside the
+sandbox and reports per-level results. Run it after every change to game content,
+and read the level report, not just pass/fail.
+
+`publish` runs the same gate and refuses to publish if it fails, so there is
+nothing to be gained by skipping it.
+
+For `validate` to find your game, its `package.json` must say where the data is:
+
+```json
+"lessonplay": { "entry": "src/content/game.ts", "export": "myGame" }
+```
+
+Under the hood it calls these, from `@learn-loop/core`:
 
 ```text
-validateExperimentMission(game)   // structural, THEN quality (the single gate)
-  validateExperimentGame(game)     // structural / referential only
-  analyzeExperimentGame(game)      // per-level quality (folds solveExperiment)
+validateExperimentMission(game)   // the single gate: 1 -> 2 -> 3 below
+  validateExperimentGame(game)     // 1. structural / referential
+  analyzeExperimentGame(game)      // 2. per-level quality (folds solveExperiment)
+  replayExperimentGame(game)       // 3. plays every level through the reducer
 solveExperiment(definition, level) // one level's verdict, for diagnosis
 ```
 
-`validateExperimentMission` runs structural validation first and only runs the
-quality analysis when structure is clean, mirroring `validateSandboxLabMission`.
-Treat a quality defect exactly like a structural error: do not ship it.
+Each stage runs only when the previous one is clean, and its errors are returned
+alone — so you always get causes before symptoms. Treat a quality defect exactly
+like a structural error: do not ship it.
 
 ## Structural checks (validateExperimentGame)
 
@@ -58,6 +71,19 @@ and the checks vary by kind:
 
 If a level is flagged, fix the *design* (add the ambiguity, vary the prompts, add
 a `setState` tool that reaches the target), not the analyzer.
+
+## Completability check (replayExperimentGame)
+
+The analysis above reasons about the *rules*. A learner drives the *session
+reducer*, which adds phases, the evidence gate on classifying, prompt walks and
+per-level win conditions on top. So the last stage takes each level's winning
+path and plays it through `reduceExperimentSession`, requiring every level to
+reach `revealed` and the game to end in `complete`.
+
+An error here names the level, the exact event the runtime refused, and the phase
+it was in — e.g. *"the runtime refused open-classify (step 7 of 9) while in phase
+exploring"*. That means the path is real but the runtime disagrees, so read the
+level's goal and scaffolding rather than editing the path.
 
 ## Static checks
 

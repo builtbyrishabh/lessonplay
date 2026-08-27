@@ -14,6 +14,7 @@ import {
   type ReachTargetStateGoal,
 } from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
+import type { ExperimentSessionEvent } from "./experimentSession";
 import {
   matchesNumericWhen,
   matchesWhen,
@@ -82,6 +83,16 @@ export interface ExperimentAnalysis {
    * that reach the target. `Infinity` when unachievable; `0` when not applicable.
    */
   readonly toolsNeeded: number;
+  /**
+   * The exact events a player would dispatch to win this level, ready to feed
+   * to `reduceExperimentSession`. Empty when the level is not winnable.
+   *
+   * This is what turns "the analyzer proved a path exists" into "the runtime
+   * walks that path to a win" — see {@link replayExperimentGame}. The analysis
+   * reasons over the rule layer; the reducer is what a learner actually drives,
+   * and only replaying the path holds the two to the same answer.
+   */
+  readonly winningPath: readonly ExperimentSessionEvent[];
   /** Human-readable, ship-blocking problems (empty ⇒ the level is acceptable). */
   readonly errors: readonly string[];
 }
@@ -368,6 +379,9 @@ function solveClassify(
     railed,
     indistinguishablePairs,
     toolsNeeded,
+    winningPath: winnable
+      ? buildClassifyPath(definition, level, classifySamples, actions)
+      : [],
     errors,
   };
 }
@@ -441,14 +455,16 @@ function solvePredictOutcome(
     );
   }
 
+  const winnable = errors.length === 0;
   return {
     levelId: level.id,
     goalKind: "predict-outcome",
-    winnable: errors.length === 0,
+    winnable,
     bruteForceable: guessable,
     railed: false,
     indistinguishablePairs: [],
     toolsNeeded: 0,
+    winningPath: winnable ? buildPredictOutcomePath(definition, goal) : [],
     errors,
   };
 }
@@ -488,6 +504,7 @@ function solveReachTargetState(
       railed: false,
       indistinguishablePairs: [],
       toolsNeeded: Number.POSITIVE_INFINITY,
+      winningPath: [],
       errors,
     };
   }
@@ -517,7 +534,12 @@ function solveReachTargetState(
   }
 
   const actions = buildProbeActions(definition, level);
-  const stepsToTarget = minStepsToTarget(sample.properties, goal, actions, definition);
+  const { steps: stepsToTarget, path: targetPath } = shortestPathToTarget(
+    sample.properties,
+    goal,
+    actions,
+    definition,
+  );
   const reachable = Number.isFinite(stepsToTarget);
   if (!triviallyReachable && !reachable) {
     errors.push(
@@ -525,14 +547,18 @@ function solveReachTargetState(
     );
   }
 
+  const winnable = reachable && !triviallyReachable && errors.length === 0;
   return {
     levelId: level.id,
     goalKind: "reach-target-state",
-    winnable: reachable && !triviallyReachable && errors.length === 0,
+    winnable,
     bruteForceable: false,
     railed: false,
     indistinguishablePairs: [],
     toolsNeeded: stepsToTarget,
+    winningPath: winnable
+      ? buildReachTargetPath(definition, level, goal, targetPath)
+      : [],
     errors,
   };
 }
@@ -545,26 +571,39 @@ function stateKey(state: ExperimentSampleState): string {
     .join("&");
 }
 
+/** One BFS frontier entry: a reached state and the actions that reached it. */
+interface ReachNode {
+  readonly state: ExperimentSampleState;
+  readonly path: readonly ProbeAction[];
+}
+
 /**
- * Fewest probe actions that drive `initial` to a state satisfying the goal, or
- * `Infinity` if no sequence within {@link REACH_MAX_DEPTH} does. A plain BFS over
- * the property state space; each (tool, operand) is a deterministic edge.
+ * The shortest action sequence that drives `initial` to a state satisfying the
+ * goal — `steps` is its length (`Infinity`, with an empty path, when no sequence
+ * within {@link REACH_MAX_DEPTH} does). A plain BFS over the property state
+ * space; each (tool, operand) is a deterministic edge.
+ *
+ * The path is carried on the frontier rather than reconstructed from parent
+ * pointers: the search is bounded and shallow, so the copying is cheap and the
+ * node stays immutable.
  */
-function minStepsToTarget(
+function shortestPathToTarget(
   initial: ExperimentSampleState,
   goal: ReachTargetStateGoal,
   actions: readonly ProbeAction[],
   definition: ExperimentDefinition,
-): number {
-  if (matchesTarget(initial, goal.target, goal.numericTarget)) return 0;
+): { steps: number; path: readonly ProbeAction[] } {
+  if (matchesTarget(initial, goal.target, goal.numericTarget)) {
+    return { steps: 0, path: [] };
+  }
   const visited = new Set<string>([stateKey(initial)]);
-  let frontier: ExperimentSampleState[] = [initial];
+  let frontier: ReachNode[] = [{ state: initial, path: [] }];
   for (let depth = 1; depth <= REACH_MAX_DEPTH; depth++) {
-    const next: ExperimentSampleState[] = [];
-    for (const state of frontier) {
+    const next: ReachNode[] = [];
+    for (const node of frontier) {
       for (const action of actions) {
         const { nextState } = runExperimentStep(
-          state,
+          node.state,
           action.toolId,
           definition.ruleSet,
           action.operandState,
@@ -572,16 +611,148 @@ function minStepsToTarget(
         const key = stateKey(nextState);
         if (visited.has(key)) continue;
         visited.add(key);
+        const path = [...node.path, action];
         if (matchesTarget(nextState, goal.target, goal.numericTarget)) {
-          return depth;
+          return { steps: depth, path };
         }
-        next.push(nextState);
+        next.push({ state: nextState, path });
       }
     }
     if (next.length === 0) break;
     frontier = next;
   }
-  return Number.POSITIVE_INFINITY;
+  return { steps: Number.POSITIVE_INFINITY, path: [] };
+}
+
+/** The `select-tool` event for a probe action, binary or unary. */
+function selectToolEvent(action: ProbeAction): ExperimentSessionEvent {
+  return action.operandId === undefined
+    ? { type: "select-tool", toolId: action.toolId }
+    : { type: "select-tool", toolId: action.toolId, operandId: action.operandId };
+}
+
+/**
+ * The events for one probe: choose the tool, predict when the level demands it,
+ * then dismiss the observation. Returns the events and the sample state the
+ * probe leaves behind, so a caller chaining probes stays in step with the
+ * reducer's evolving `sampleStates`.
+ *
+ * The prediction is filled in from that tracked state. A prediction never gates
+ * progress — the reducer records whether it was right and advances either way —
+ * so even a wrong one cannot turn a winnable level into a failed replay.
+ */
+function probeEvents(
+  state: ExperimentSampleState,
+  action: ProbeAction,
+  level: ExperimentLevel,
+  definition: ExperimentDefinition,
+): { events: ExperimentSessionEvent[]; nextState: ExperimentSampleState } {
+  const step = runExperimentStep(
+    state,
+    action.toolId,
+    definition.ruleSet,
+    action.operandState,
+  );
+  const events: ExperimentSessionEvent[] = [selectToolEvent(action)];
+  if (level.predictionRequired) {
+    events.push({ type: "predict", visual: step.effect.visual });
+  }
+  events.push({ type: "dismiss-observation" });
+  return { events, nextState: step.nextState };
+}
+
+/**
+ * The events that win a classify level: probe every sample that must be
+ * classified — which is exactly what `canClassify`'s evidence gate demands
+ * before the classify step opens — then assign each its true category.
+ *
+ * One probe per sample is enough to open the gate, so the path uses the first
+ * available action rather than the full separating set. The point is to prove
+ * the level *completes* through the reducer; `toolsNeeded` is what reports how
+ * much evidence winning by reasoning actually takes.
+ */
+function buildClassifyPath(
+  definition: ExperimentDefinition,
+  level: ExperimentLevel,
+  samples: readonly ExperimentSample[],
+  actions: readonly ProbeAction[],
+): ExperimentSessionEvent[] {
+  const probe = actions[0];
+  if (!probe || samples.length === 0) return [];
+
+  const events: ExperimentSessionEvent[] = [{ type: "start-level" }];
+  for (const sample of samples) {
+    events.push({ type: "select-sample", sampleId: sample.id });
+    events.push(
+      ...probeEvents(sample.properties, probe, level, definition).events,
+    );
+  }
+  events.push({ type: "open-classify" });
+  for (const sample of samples) {
+    events.push({
+      type: "assign-category",
+      sampleId: sample.id,
+      categoryId: sample.categoryId,
+    });
+  }
+  events.push({ type: "submit-classification" });
+  return events;
+}
+
+/**
+ * The events that win a predict-outcome level: answer each prompt with the
+ * visual its rule actually produces, dismissing between prompts. `start-level`
+ * opens straight into the first prompt, so no sample or tool is selected here.
+ */
+function buildPredictOutcomePath(
+  definition: ExperimentDefinition,
+  goal: PredictOutcomeGoal,
+): ExperimentSessionEvent[] {
+  const events: ExperimentSessionEvent[] = [{ type: "start-level" }];
+  for (const prompt of goal.prompts) {
+    const sample = definition.samples.find((s) => s.id === prompt.sampleId);
+    if (!sample) return [];
+    const operandState =
+      prompt.operandId === undefined
+        ? undefined
+        : operandInitialState(prompt.operandId, definition);
+    const { effect } = runExperimentStep(
+      sample.properties,
+      prompt.toolId,
+      definition.ruleSet,
+      operandState,
+    );
+    events.push({ type: "predict", visual: effect.visual });
+    events.push({ type: "dismiss-observation" });
+  }
+  return events;
+}
+
+/**
+ * The events that win a reach-target-state level: select the target sample and
+ * walk the shortest action path the BFS found. The reducer checks the target on
+ * each `dismiss-observation`, so the win lands on the last one.
+ */
+function buildReachTargetPath(
+  definition: ExperimentDefinition,
+  level: ExperimentLevel,
+  goal: ReachTargetStateGoal,
+  path: readonly ProbeAction[],
+): ExperimentSessionEvent[] {
+  const sample = definition.samples.find((s) => s.id === goal.sampleId);
+  if (!sample || path.length === 0) return [];
+
+  const events: ExperimentSessionEvent[] = [
+    { type: "start-level" },
+    { type: "select-sample", sampleId: goal.sampleId },
+  ];
+  let state = sample.properties;
+  for (const action of path) {
+    const probe = probeEvents(state, action, level, definition);
+    events.push(...probe.events);
+    state = probe.nextState;
+  }
+  return events;
 }
 
 /**

@@ -7,7 +7,10 @@ import {
   type UIMessage,
 } from "ai";
 
+import { env } from "~/env";
+import { publishedGameKey } from "~/lib/sandbox-paths";
 import { isValidThreadId } from "~/lib/thread-id";
+import { prepareLessonSandbox } from "~/server/sandbox/prepare";
 import { createLessonAgent } from "~/mastra/agents/lesson-agent";
 import {
   LESSON_MAX_STEPS,
@@ -63,8 +66,28 @@ export async function POST(req: Request) {
   const model = resolveLessonModel(body.model);
   log("request.parsed", { threadId, model });
 
+  // Kick the sandbox off first and DO NOT await it — boot, R2 mount and the
+  // restore of the last published source all run while the agent is assembled
+  // and the model produces its first tokens. The promise is awaited only
+  // inside a tool, if the model ever calls one.
+  const trace = { id: traceId, log };
+  const sandboxPromise = prepareLessonSandbox({ threadId, userId, trace });
+
+  // Stable for the life of the thread: every publish overwrites this one key,
+  // so the teacher's link never changes.
+  const publishedUrl = env.R2_PUBLIC_BASE_URL
+    ? `${env.R2_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${publishedGameKey(userId, threadId)}`
+    : null;
+
   const [agent, modelMessages] = await Promise.all([
-    createLessonAgent({ threadId, userId, model, trace: { id: traceId, log } }),
+    createLessonAgent({
+      threadId,
+      userId,
+      model,
+      sandboxPromise,
+      publishedUrl,
+      trace,
+    }),
     convertToModelMessages([message]),
   ]);
 

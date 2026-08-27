@@ -12,6 +12,7 @@ import {
   type NumericComparison,
 } from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
+import { replayExperimentGame } from "./replayExperiment";
 import { analyzeExperimentGame } from "./solveExperiment";
 
 const KNOWN_VISUALS = new Set<string>(EXPERIMENT_VISUALS);
@@ -371,18 +372,33 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
 }
 
 /**
- * The single build-time gate for an ExperimentLab game: structural validation
- * first (referential integrity, discovery-before-naming), and only when that
- * passes, the per-level quality analysis (winnable, not brute-forceable, not
- * railed). Structural errors are primary and returned alone, mirroring
+ * The single build-time gate for an ExperimentLab game, in three stages that run
+ * strictly in order because each only makes sense on top of the last:
+ *
+ *   1. structural — referential integrity, discovery-before-naming;
+ *   2. quality — per level: winnable, not brute-forceable, not railed;
+ *   3. replay — every level driven to a win through the real session reducer.
+ *
+ * Each stage's errors are returned alone. Solvability is meaningless on
+ * incoherent data, and a replay of an unwinnable level would only restate the
+ * analyzer's finding in a more confusing way — so a caller surfacing these to a
+ * generating agent always gets causes before symptoms. Mirrors
  * {@link validateSandboxLabMission}.
+ *
+ * Stage 3 is what makes "completable" a fact rather than an inference: stages 1
+ * and 2 reason about the rules, while a learner drives the reducer.
  */
 export function validateExperimentMission(
   game: ExperimentGame,
 ): ValidationResult {
   const structural = validateExperimentGame(game);
   if (!structural.ok) return structural;
-  return analyzeExperimentGame(game);
+
+  const quality = analyzeExperimentGame(game);
+  if (!quality.ok) return quality;
+
+  const replay = replayExperimentGame(game);
+  return { ok: replay.ok, errors: replay.errors };
 }
 
 function escapeRegExp(text: string): string {

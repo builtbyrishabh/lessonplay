@@ -4,6 +4,10 @@
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
+  "lessonplay": {
+    "entry": "src/content/missions.ts",
+    "export": "chemistryLabTemplate"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5182",
     "build": "tsc --noEmit && vite build",
@@ -18,15 +22,16 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.0.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^26.0.0",
     "typescript": "~5.7.3",
     "vite": "^8.0.16",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.0"
   }
 }
