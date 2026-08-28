@@ -241,6 +241,88 @@ describe("publish", () => {
     expect(script).toContain(".tar.gz");
   });
 
+  it("keeps each version's build so an old version stays previewable", async () => {
+    const sandbox = fakeSandbox({}, [
+      { match: "PUBLISHED", exitCode: 0, result: "PUBLISHED 3" },
+    ]);
+    await run<PublishResult>(toolsFor(sandbox).publish, {
+      intent: "Publishing the titration lab",
+    });
+
+    const script = sandbox.commands.find((c) => c.includes(R2_VERSIONS_DIR))!;
+    // current/index.html is overwritten every publish; without this copy the
+    // only way back to version 3 would be rebuilding its tarball.
+    expect(script).toContain(`${R2_VERSIONS_DIR}/"$next".html`);
+    // And it still lands before the live file, like the snapshot does.
+    expect(script.indexOf(`${R2_VERSIONS_DIR}/"$next".html`)).toBeLessThan(
+      script.indexOf(`${R2_CURRENT_DIR}/index.html`),
+    );
+  });
+
+  it("indexes the published version for the app", async () => {
+    const sandbox = fakeSandbox({}, [
+      { match: "PUBLISHED", exitCode: 0, result: "PUBLISHED 3" },
+    ]);
+    const recorded: { version: number; label: string }[] = [];
+    const tools = createSandboxTools({
+      sandboxPromise: Promise.resolve(sandbox),
+      recordVersion: (published) => {
+        recorded.push(published);
+        return Promise.resolve();
+      },
+    });
+
+    const res = await run<PublishResult>(tools.publish, {
+      intent: "Publishing the titration lab",
+    });
+
+    expect(res.ok).toBe(true);
+    // The teacher-facing intent doubles as the version's label.
+    expect(recorded).toEqual([
+      { version: 3, label: "Publishing the titration lab" },
+    ]);
+  });
+
+  it("still reports success when indexing the version fails", async () => {
+    const sandbox = fakeSandbox({}, [
+      { match: "PUBLISHED", exitCode: 0, result: "PUBLISHED 3" },
+    ]);
+    const tools = createSandboxTools({
+      sandboxPromise: Promise.resolve(sandbox),
+      recordVersion: () => Promise.reject(new Error("database is down")),
+    });
+
+    const res = await run<PublishResult>(tools.publish, {
+      intent: "Publishing the titration lab",
+    });
+
+    // The game IS in the bucket at this point. Reporting a failure would send
+    // the model back through the whole gate to fix something it cannot reach.
+    expect(res).toMatchObject({ ok: true, version: 3 });
+    expect(res.message).not.toContain("database is down");
+  });
+
+  it("does not index a publish whose version could not be read", async () => {
+    const sandbox = fakeSandbox({}, [
+      { match: "PUBLISHED", exitCode: 0, result: "PUBLISHED not-a-number" },
+    ]);
+    const recorded: unknown[] = [];
+    const tools = createSandboxTools({
+      sandboxPromise: Promise.resolve(sandbox),
+      recordVersion: (published) => {
+        recorded.push(published);
+        return Promise.resolve();
+      },
+    });
+
+    await run<PublishResult>(tools.publish, {
+      intent: "Publishing the titration lab",
+    });
+
+    // A NaN version would violate the table's primary key.
+    expect(recorded).toEqual([]);
+  });
+
   it("explains a multi-file dist instead of publishing half a game", async () => {
     const sandbox = fakeSandbox({}, [
       {

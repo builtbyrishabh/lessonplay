@@ -7,7 +7,11 @@ import type { LessonTrace } from "~/mastra/agents/lesson-shared";
 import { getOrCreateSandbox } from "./daytona";
 import { runCommand } from "./exec";
 import { mountR2Bucket } from "./r2-mount";
-import { hydrateScript, linkEngineModulesScript } from "./scripts";
+import {
+  hydrateScript,
+  linkEngineModulesScript,
+  scaffoldTemplateScript,
+} from "./scripts";
 
 /** Env baked into the sandbox at create time. Empty for now. */
 const SANDBOX_ENV: Record<string, string> = {};
@@ -27,6 +31,19 @@ async function hydrateWorkingTree(
     await runCommand(sandbox, `rm -rf ${GAME_ROOT} && mkdir -p ${GAME_ROOT}`);
     throw new Error(
       `[LessonPlay] hydrate failed (exit ${res.exitCode}): ${res.stdout.slice(-1000)}`,
+    );
+  }
+
+  // A thread with nothing to restore starts from the template. Before the
+  // node_modules link, which would make the tree look non-empty.
+  const scaffold = await runCommand(sandbox, scaffoldTemplateScript());
+  log("sandbox.scaffold", {
+    state: scaffold.stdout.trim().split("\n").pop(),
+    ok: scaffold.success,
+  });
+  if (!scaffold.success) {
+    throw new Error(
+      `[LessonPlay] scaffold failed (exit ${scaffold.exitCode}): ${scaffold.stdout.slice(-1000)}`,
     );
   }
 

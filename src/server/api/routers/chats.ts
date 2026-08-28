@@ -2,11 +2,21 @@ import { toAISdkMessages } from "@mastra/ai-sdk/ui";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { isValidThreadId, newThreadId } from "~/lib/thread-id";
+import { isValidThreadId } from "~/lib/thread-id";
 import { getLessonMemory } from "~/mastra/agents/lesson-memory";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const threadIdSchema = z.string().refine(isValidThreadId, "invalid threadId");
+
+/**
+ * Mastra stores a brand-new thread's title as `""` (not null) and only fills it
+ * in when the auto-title runs at the end of the first turn. `?? "New chat"` did
+ * not catch that, so a new chat rendered as a blank row in the sidebar and only
+ * *appeared* once the first reply finished. Treat empty/whitespace as untitled.
+ */
+function threadTitle(title: string | null | undefined) {
+  return title?.trim() || "New chat";
+}
 
 /** Thread CRUD over Mastra Memory. Streaming lives in /api/chat (route handler). */
 export const chatsRouter = createTRPCRouter({
@@ -19,21 +29,21 @@ export const chatsRouter = createTRPCRouter({
     });
     return threads.map((t) => ({
       id: t.id,
-      title: t.title ?? "New chat",
+      title: threadTitle(t.title),
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
     }));
   }),
 
   create: protectedProcedure
-    .input(z.object({ threadId: threadIdSchema.optional() }).optional())
+    .input(z.object({ threadId: threadIdSchema }))
     .mutation(async ({ ctx, input }) => {
       const memory = getLessonMemory();
       const thread = await memory.createThread({
-        threadId: input?.threadId ?? newThreadId(),
+        threadId: input.threadId,
         resourceId: ctx.userId,
       });
-      return { id: thread.id, title: thread.title ?? "New chat" };
+      return { id: thread.id, title: threadTitle(thread.title) };
     }),
 
   messages: protectedProcedure
@@ -50,7 +60,7 @@ export const chatsRouter = createTRPCRouter({
         perPage: false,
       });
       return {
-        thread: { id: thread.id, title: thread.title ?? "New chat" },
+        thread: { id: thread.id, title: threadTitle(thread.title) },
         messages: toAISdkMessages(messages, { version: "v6" }),
       };
     }),

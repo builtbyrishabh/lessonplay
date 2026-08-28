@@ -97,9 +97,28 @@ function finiteOrNull(value: number): number | null {
 }
 
 function reportExperiment(game: ExperimentGame, index: number): ItemReport {
+  const id = game.id || `game-${index + 1}`;
+  try {
+    return reportExperimentUnsafe(game, id);
+  } catch (err) {
+    // Malformed data the structural pass did not anticipate. The caller shows
+    // `errors` to the model; a stack trace on stderr and exit 1 shows nothing.
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      id,
+      kind: "experiment-lab",
+      ok: false,
+      errors: [
+        `the gate crashed while analysing this game: ${message}. The game data is malformed — check every rule has a \`when\` (use {} for any state), every effect has observationId/observation/visual, and every level names existing sample and tool ids.`,
+      ],
+    };
+  }
+}
+
+function reportExperimentUnsafe(game: ExperimentGame, id: string): ItemReport {
   const result = validateExperimentMission(game);
   return {
-    id: game.id || `game-${index + 1}`,
+    id,
     kind: "experiment-lab",
     ok: result.ok,
     errors: result.errors,

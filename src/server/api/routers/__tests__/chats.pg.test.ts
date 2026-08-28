@@ -4,6 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { newThreadId } from "~/lib/thread-id";
+
 const enabled = !!process.env.PG_INTEGRATION && !!process.env.DATABASE_URL;
 
 describe.skipIf(!enabled)("chats router (postgres)", () => {
@@ -23,7 +25,7 @@ describe.skipIf(!enabled)("chats router (postgres)", () => {
     const mine = createCaller(ctx(userId));
     const theirs = createCaller(ctx(otherUserId));
 
-    const created = await mine.create();
+    const created = await mine.create({ threadId: newThreadId() });
     expect(created.id).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
 
     const list = await mine.list();

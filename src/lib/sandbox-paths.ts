@@ -18,6 +18,12 @@ export const R2_ROOT = `${SANDBOX_HOME}/r2`;
 export const R2_CURRENT_DIR = `${R2_ROOT}/current`;
 /** Append-only source snapshots, one numbered directory per publish. */
 export const R2_VERSIONS_DIR = `${R2_ROOT}/versions`;
+/**
+ * Teacher-supplied source material (a chapter PDF, an activity sheet). Written
+ * by the app's upload route straight into R2, so it shows up here the moment
+ * the sandbox mounts — the agent reads it, nothing writes it from inside.
+ */
+export const R2_UPLOADS_DIR = `${R2_ROOT}/uploads`;
 
 /**
  * The engine monorepo: @learn-loop/core, the game templates, and the 102
@@ -27,6 +33,13 @@ export const R2_VERSIONS_DIR = `${R2_ROOT}/versions`;
  * Skills are NOT here. They are served from the app; see `~/mastra/skills`.
  */
 export const ENGINE_ROOT = `${SANDBOX_HOME}/engine`;
+
+/**
+ * The starter every game is a modification of. Copied into GAME_ROOT once, by
+ * `scaffoldTemplateScript()`, the first time a thread's working tree is empty —
+ * so the model edits a project that already builds instead of assembling one.
+ */
+export const GAME_TEMPLATE_ROOT = `${ENGINE_ROOT}/games/chemistry-lab-bench`;
 
 /** The one file `publish` writes; the preview URL points straight at it. */
 export const PUBLISHED_FILE = "index.html";
@@ -43,6 +56,71 @@ export function gameBucketPrefix(userId: string, threadId: string) {
 /** Object key of the published game. Computed here, never by the model. */
 export function publishedGameKey(userId: string, threadId: string) {
   return `${gameBucketPrefix(userId, threadId)}/current/${PUBLISHED_FILE}`;
+}
+
+/**
+ * Object key of ONE version's source snapshot.
+ *
+ * Mirrors the name `publishScript()` writes. Both spellings have to agree, so
+ * the script builds the path from R2_VERSIONS_DIR and this rebuilds the same
+ * name as a bucket key; the smoke test covers the script side.
+ */
+export function versionSnapshotKey(
+  userId: string,
+  threadId: string,
+  version: number,
+) {
+  return `${gameBucketPrefix(userId, threadId)}/versions/${version}.tar.gz`;
+}
+
+/**
+ * Object key of ONE version's built game.
+ *
+ * `current/index.html` is overwritten on every publish, so without this an
+ * older version could only be previewed by rebuilding its tarball. Written
+ * alongside the snapshot by `publishScript()`.
+ */
+export function versionHtmlKey(
+  userId: string,
+  threadId: string,
+  version: number,
+) {
+  return `${gameBucketPrefix(userId, threadId)}/versions/${version}.html`;
+}
+
+/**
+ * Collapse a client-supplied filename to a single safe basename.
+ *
+ * The upload key is built from this and nothing else, so it is the only thing
+ * standing between a browser and writing to `../current/index.html`. Strips any
+ * directory part, keeps a conservative charset, and never returns "" — an empty
+ * or all-junk name becomes a timestamp-free "file" the caller can prefix.
+ */
+export function sanitizeUploadFilename(input: string): string {
+  const base = input.split(/[\\/]/).pop() ?? "";
+  const cleaned = base
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^[.-]+/, "")
+    .slice(0, 128);
+  return cleaned || "file";
+}
+
+/** Bucket prefix uploads live under: games/<userId>/<threadId>/uploads. */
+export function uploadsPrefix(userId: string, threadId: string) {
+  return `${gameBucketPrefix(userId, threadId)}/uploads`;
+}
+
+/**
+ * Object key of one uploaded file. `name` MUST already be sanitized — callers
+ * pass it through `sanitizeUploadFilename` first — so the key can never escape
+ * the thread's uploads/ folder.
+ */
+export function uploadObjectKey(
+  userId: string,
+  threadId: string,
+  name: string,
+) {
+  return `${uploadsPrefix(userId, threadId)}/${name}`;
 }
 
 /**

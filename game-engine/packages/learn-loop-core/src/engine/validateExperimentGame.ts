@@ -213,6 +213,13 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
     if (!toolIds.has(rule.toolId)) {
       errors.push(`rule references unknown tool "${rule.toolId}"`);
     }
+    // `when` is required even when empty. Authored data arrives untyped, and a
+    // rule that leaves it out used to crash the analyzer instead of failing here.
+    if (typeof rule.when !== "object" || rule.when === null) {
+      errors.push(
+        `rule for tool "${rule.toolId}" (observation "${rule.effect?.observationId}") has no \`when\` — use \`when: {}\` for a rule that fires on any state`,
+      );
+    }
     // A rule that constrains a second operand must be for a binary tool.
     const spec = toolById.get(rule.toolId);
     const constrainsOperand =

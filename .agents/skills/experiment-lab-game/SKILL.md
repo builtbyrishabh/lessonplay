@@ -79,10 +79,14 @@ inference; they make it. Concept names are withheld until after the goal is met
 4. Read `references/gameplay-contract.md` before designing the level ladder.
 5. Read `references/authoring-contract.md` before writing observation text,
    categories, predictions, or hints.
-6. Read `references/validation-checklist.md` before reporting completion.
-7. Author the game as data: one `ExperimentDefinition` (the consistent world)
+6. Read `references/implementation-pattern.md` before creating or editing any
+   project file — it is the starter project's layout and the exact five files
+   an ExperimentLab game changes. Do not explore the project or the engine
+   source to learn this.
+7. Read `references/validation-checklist.md` before reporting completion.
+8. Author the game as data: one `ExperimentDefinition` (the consistent world)
    plus categories and a level ladder, exported as one `ExperimentGame`.
-8. Validate with `validateExperimentMission` (structural + quality) and the
+9. Validate with `validateExperimentMission` (structural + quality) and the
    per-level `solveExperiment`. Do not ship a level the analyzer flags.
 
 Do not re-decide the learning objective or archetype. If the plan is incomplete
@@ -147,3 +151,5 @@ export function App() {
 - `src/style.css` is only the full-height dark page shell the 9:16 viewport
   centres inside; the whole game UI (beaker, beam, readings grid, animations)
   lives in `experiment.css`.
+- Which files to write, which to delete, and the test that keeps the build
+  honest: `references/implementation-pattern.md`.

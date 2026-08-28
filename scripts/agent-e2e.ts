@@ -33,6 +33,7 @@ import { mountR2Bucket } from "../src/server/sandbox/r2-mount";
 import {
   hydrateScript,
   linkEngineModulesScript,
+  scaffoldTemplateScript,
 } from "../src/server/sandbox/scripts";
 
 /**
@@ -69,6 +70,14 @@ function prepareLessonSandbox(opts: {
     if (!res.success) {
       await runCommand(sandbox, `rm -rf ${GAME_ROOT} && mkdir -p ${GAME_ROOT}`);
       throw new Error(`hydrate failed (exit ${res.exitCode})`);
+    }
+    const scaffold = await runCommand(sandbox, scaffoldTemplateScript());
+    log("sandbox.scaffold", {
+      state: scaffold.stdout.trim().split("\n").pop(),
+      ok: scaffold.success,
+    });
+    if (!scaffold.success) {
+      throw new Error(`scaffold failed (exit ${scaffold.exitCode})`);
     }
     const link = await runCommand(sandbox, linkEngineModulesScript());
     log("sandbox.engine_modules", {

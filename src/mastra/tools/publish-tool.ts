@@ -25,6 +25,20 @@ export type CreatePublishToolOptions = {
    * still works, the model just reports the key instead of a link.
    */
   publishedUrl?: string | null;
+  /**
+   * Called after R2 has the new version, to index it for the app.
+   *
+   * A callback rather than a database import on purpose: it keeps this module
+   * free of `~/env` and `~/server/db`, so the whole tool set stays unit-testable
+   * against a fake sandbox. The route supplies the real one.
+   *
+   * Its failure is swallowed — see the call site. R2 is the source of truth;
+   * a missing row is a stale index, not a lost game.
+   */
+  recordVersion?: (published: {
+    version: number;
+    label: string;
+  }) => Promise<void>;
   trace?: LessonTrace;
 };
 
@@ -45,6 +59,7 @@ function tail(output: string): string {
 export function createPublishTool({
   sandboxPromise,
   publishedUrl,
+  recordVersion,
   trace,
 }: CreatePublishToolOptions) {
   return createTool({
@@ -162,6 +177,23 @@ export function createPublishTool({
         version,
         durationMs: Math.round(performance.now() - startedAt),
       });
+
+      // Index the new version for the app. Deliberately after the bucket write
+      // and deliberately non-fatal: the game IS published at this point, and
+      // telling the model otherwise would send it round the whole gate again to
+      // fix a database it cannot reach. A dropped row costs the version list
+      // one entry; the game itself is still live and the next publish indexes
+      // normally.
+      if (recordVersion && Number.isFinite(version)) {
+        try {
+          await recordVersion({ version, label: intent });
+        } catch (err) {
+          log("tool.publish.record_failed", {
+            version,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
 
       return {
         ok: true,

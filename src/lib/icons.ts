@@ -18,4 +18,7 @@ export {
   Trash as TrashIcon,
   Stop as StopIcon,
   Sparkles as SparklesIcon,
+  Paperclip as PaperclipIcon,
+  FileText as FileTextIcon,
+  CrossSmall as CrossSmallIcon,
 } from "geist-icons";

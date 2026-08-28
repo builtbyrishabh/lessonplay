@@ -9,6 +9,7 @@
 import {
   ENGINE_ROOT,
   GAME_ROOT,
+  GAME_TEMPLATE_ROOT,
   PUBLISHED_FILE,
   R2_CURRENT_DIR,
   R2_VERSIONS_DIR,
@@ -55,6 +56,33 @@ export function hydrateScript(): string {
     `tar -xzf /tmp/restore.tar.gz -C ${GAME_ROOT}`,
     "rm -f /tmp/restore.tar.gz",
     `echo "HYDRATED $latest"`,
+  ].join("\n");
+}
+
+/**
+ * Start a never-published thread from the game template.
+ *
+ * Runs after hydrate and before the node_modules link, and only into an EMPTY
+ * working tree: a restored or resumed tree is the teacher's game and is never
+ * touched. Without this the model's first job was to discover the template's
+ * layout by listing ~/engine and copying it across — a dozen tool calls that
+ * taught it nothing about the game. Now the project already builds, and the
+ * skill tells it which files to replace.
+ *
+ * Exit 2 when the template is missing from the base image: the prompt promises
+ * a scaffolded project, so silently handing over an empty directory would only
+ * move the failure somewhere harder to see.
+ */
+export function scaffoldTemplateScript(): string {
+  return [
+    "set -e",
+    `mkdir -p ${GAME_ROOT}`,
+    `if [ -n "$(find ${GAME_ROOT} -mindepth 1 -maxdepth 1 -print -quit)" ]; then echo KEPT; exit 0; fi`,
+    `test -d ${GAME_TEMPLATE_ROOT} || { echo NO_TEMPLATE; exit 2; }`,
+    // Sources only. The template's deps are hoisted to ~/engine/node_modules
+    // (linked next), and a stray dist/ would look like a build that never ran.
+    `tar -c --exclude=./node_modules --exclude=./dist -C ${GAME_TEMPLATE_ROOT} . | tar -x -C ${GAME_ROOT}`,
+    "echo SCAFFOLDED",
   ].join("\n");
 }
 
@@ -112,6 +140,13 @@ export function publishScript(): string {
     `tar -czf /tmp/snapshot.tar.gz --exclude=./node_modules --exclude=./dist --exclude=./.git -C ${GAME_ROOT} .`,
     `cp /tmp/snapshot.tar.gz ${R2_VERSIONS_DIR}/"$next".tar.gz`,
     "rm -f /tmp/snapshot.tar.gz",
+    // The build too, beside its source. current/ is overwritten on every
+    // publish, so this is the only copy of THIS version's playable game —
+    // without it an older version could only be seen by rebuilding its tarball.
+    `cp ${GAME_ROOT}/dist/${PUBLISHED_FILE} ${R2_VERSIONS_DIR}/"$next".html`,
+    // Last, and only once the version is complete on both counts: this is the
+    // write a reader observes, so a transfer that dies above leaves the
+    // previously published game serving, untouched.
     `cp ${GAME_ROOT}/dist/${PUBLISHED_FILE} ${R2_CURRENT_DIR}/${PUBLISHED_FILE}`,
     'echo "PUBLISHED $next"',
   ].join("\n");

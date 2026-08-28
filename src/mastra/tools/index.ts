@@ -17,6 +17,15 @@ export type SandboxToolOptions = {
    * import `~/env` and the whole set stays unit-testable.
    */
   publishedUrl?: string | null;
+  /**
+   * Index a successful publish for the app. Supplied by the route (it needs
+   * the database); omitted in tests, where publishing still works and simply
+   * records nothing. See `createPublishTool`.
+   */
+  recordVersion?: (published: {
+    version: number;
+    label: string;
+  }) => Promise<void>;
   /** Extra env for `bash` commands. */
   env?: Record<string, string>;
   trace?: LessonTrace;
