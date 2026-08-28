@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
+import { Logo } from "~/components/brand/logo";
 import { ChatItem } from "~/components/layout/chat-item";
 import { Button } from "~/components/ui/button";
 import {
@@ -33,10 +34,7 @@ export function Sidebar(props: SidebarProps) {
               className="text-sidebar-foreground flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-sm font-medium"
               href="/"
             >
-              <span className="bg-foreground text-background flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold">
-                L
-              </span>
-              <span className="truncate">LessonPlay</span>
+              <Logo />
             </Link>
             <Button
               aria-label="Collapse sidebar"

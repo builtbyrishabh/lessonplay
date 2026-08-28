@@ -12,7 +12,6 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "LessonPlay",
   description: "Give it a chemistry chapter. Get a playable lab.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export default function RootLayout({
