@@ -17,8 +17,8 @@ import type { FileUIPart } from "ai";
 
 import { deriveGameFiles, type GameFilesState } from "~/lib/game-files";
 import { useSettings } from "~/lib/hooks/use-settings";
+import { lpMark } from "~/lib/perf";
 import { takePendingPrompt } from "~/lib/pending-prompt";
-import { toFileParts, uploadFiles } from "~/lib/upload";
 import { api } from "~/trpc/react";
 
 /**
@@ -37,7 +37,7 @@ type ChatContextValue = {
   status: ReturnType<typeof useChat>["status"];
   error: ReturnType<typeof useChat>["error"];
   stop: () => void;
-  send: (text: string, files?: File[]) => void;
+  send: (text: string, files?: FileUIPart[]) => void;
   /** Files the agent has authored, folded out of the tool calls. */
   gameFiles: GameFilesState;
   /** Id of the assistant message currently streaming, if any. */
@@ -68,6 +68,11 @@ export function ChatProvider({
   const { settings } = useSettings();
   const hadTitleRef = useRef(initialMessages.length > 0);
   const sentPendingRef = useRef(false);
+  // Only instrument the home → first-message path (a thread we arrived at with
+  // a pending handoff), never an existing thread opened from the sidebar.
+  const measuringRef = useRef(false);
+  const userPaintRef = useRef(false);
+  const firstTokenRef = useRef(false);
   // Read through a ref so `send` does not change identity when the model does.
   const modelRef = useRef(settings.model);
   modelRef.current = settings.model;
@@ -107,37 +112,51 @@ export function ChatProvider({
   );
 
   // Stable identity: the context value is memoised, and a `send` that changed
-  // every render would re-render both panes on every streamed token.
+  // every render would re-render both panes on every streamed token. Files
+  // arrive already uploaded (PromptBox uploads on attach), so this just fires.
   const send = useCallback(
-    (text: string, files: File[] = []) => {
-      void (async () => {
-        // Land attachments in R2 first (they also surface at ~/r2/uploads/ in
-        // the sandbox). If the upload fails, don't send a message that points
-        // at files the model can't fetch.
-        let parts: FileUIPart[] = [];
-        if (files.length > 0) {
-          try {
-            parts = toFileParts(await uploadFiles(threadId, files));
-          } catch (err) {
-            console.error("[lesson-chat] upload failed", err);
-            return;
-          }
-        }
-        dispatch(text, parts);
-      })();
+    (text: string, files: FileUIPart[] = []) => {
+      dispatch(text, files);
     },
-    [dispatch, threadId],
+    [dispatch],
   );
 
-  // First prompt handed off from the home page — its files are already
-  // uploaded, so dispatch them straight through without re-uploading.
+  // First prompt handed off from the home page. Its files were uploaded on the
+  // home page as they were attached, so the handoff carries ready file parts —
+  // we dispatch straight away, nothing on the critical path to await.
   useEffect(() => {
     if (sentPendingRef.current) return;
     sentPendingRef.current = true;
     const pending = takePendingPrompt(threadId);
-    if (pending) dispatch(pending.text, pending.files);
+    if (!pending) return;
+    measuringRef.current = true;
+    lpMark("provider-mount");
+    lpMark("dispatch");
+    dispatch(pending.text, pending.files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId]);
+
+  // Paint marks for the perf trace: when the user's own bubble first hits the
+  // DOM, and when the first assistant token renders. Gated to the measured
+  // home→first-message path so opening an old thread doesn't log noise.
+  useEffect(() => {
+    if (!measuringRef.current) return;
+    if (!userPaintRef.current && messages.some((m) => m.role === "user")) {
+      userPaintRef.current = true;
+      requestAnimationFrame(() => lpMark("user-paint"));
+    }
+    if (
+      !firstTokenRef.current &&
+      messages.some(
+        (m) =>
+          m.role === "assistant" &&
+          m.parts.some((p) => p.type === "text" && p.text.length > 0),
+      )
+    ) {
+      firstTokenRef.current = true;
+      lpMark("first-token");
+    }
+  }, [messages]);
 
   const gameFiles = useMemo(() => deriveGameFiles(messages), [messages]);
 

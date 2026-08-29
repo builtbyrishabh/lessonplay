@@ -1,6 +1,6 @@
 import type { FileUIPart } from "ai";
 
-/** What the upload route returns for one stored file. */
+/** What the upload flow yields for one stored file. */
 export type UploadedFile = {
   /**
    * The URL the model reads the file from. It lives in Memory for the life of
@@ -14,27 +14,58 @@ export type UploadedFile = {
   mediaType: string;
 };
 
+/** What `/api/upload` returns: a signed PUT plus the eventual read URL. */
+type SignedUpload = UploadedFile & { uploadUrl: string };
+
 /**
- * POST one file to `/api/upload`, into the given thread's uploads/ folder.
+ * Upload one file into the given thread's uploads/ folder.
  *
- * Same-origin multipart, so the browser never talks to R2 directly and no
- * bucket CORS is needed. The route derives userId from Clerk, so only threadId
- * and the file travel from here.
+ * Two steps, no bytes through the app server:
+ *   1. POST metadata to `/api/upload` — it validates and returns a presigned
+ *      PUT URL (scoped to the caller's own prefix via Clerk).
+ *   2. PUT the file straight to R2. The `Content-Type` MUST equal the one the
+ *      server signed, or R2 rejects the signature.
+ *
+ * Keeping the bytes off the function dodges the serverless request-body limit
+ * (which is what made big PDFs fail) and removes a hop.
  */
 export async function uploadFile(
   threadId: string,
   file: File,
 ): Promise<UploadedFile> {
-  const form = new FormData();
-  form.append("threadId", threadId);
-  form.append("file", file);
+  const contentType = file.type || "application/octet-stream";
 
-  const res = await fetch("/api/upload", { method: "POST", body: form });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(detail || `upload failed (${res.status})`);
+  const signRes = await fetch("/api/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      threadId,
+      filename: file.name,
+      contentType,
+      size: file.size,
+    }),
+  });
+  if (!signRes.ok) {
+    const detail = await signRes.text().catch(() => "");
+    throw new Error(detail || `upload failed (${signRes.status})`);
   }
-  return (await res.json()) as UploadedFile;
+  const signed = (await signRes.json()) as SignedUpload;
+
+  const putRes = await fetch(signed.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": signed.mediaType },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error(`upload failed (${putRes.status})`);
+  }
+
+  return {
+    url: signed.url,
+    filename: signed.filename,
+    size: signed.size,
+    mediaType: signed.mediaType,
+  };
 }
 
 /** Upload several files, preserving order. Rejects if any one fails. */

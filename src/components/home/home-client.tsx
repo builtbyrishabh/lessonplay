@@ -1,14 +1,15 @@
 "use client";
 
+import type { FileUIPart } from "ai";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { SidebarToggleButton } from "~/components/layout/app-shell";
 import { PromptBox } from "~/components/prompt-box";
 import { useSettings } from "~/lib/hooks/use-settings";
-import { newThreadId } from "~/lib/thread-id";
+import { lpMark } from "~/lib/perf";
 import { setPendingPrompt } from "~/lib/pending-prompt";
-import { toFileParts, uploadFiles } from "~/lib/upload";
+import { newThreadId } from "~/lib/thread-id";
 import { api } from "~/trpc/react";
 
 export function HomeClient() {
@@ -17,22 +18,36 @@ export function HomeClient() {
   const { settings, updateSettings } = useSettings();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const create = api.chats.create.useMutation();
+  // Minted up front so an attachment can upload into this thread's prefix while
+  // the teacher is still typing — the same id we then navigate to.
+  const [draftThreadId] = useState(() => newThreadId());
 
-  const startChat = async (text: string, files: File[]) => {
+  // Branch A (inline-optimized): nothing on the critical path is awaited, and
+  // attachments finish uploading BEFORE send (PromptBox uploads on attach), so
+  // the handoff carries ready file parts and the chat page dispatches at once.
+  // - No `chats.create` round-trip — Mastra Memory upserts the thread on the
+  //   first message, so creating it here was pure latency.
+  // - The sidebar row is inserted optimistically (setData); the existing
+  //   `onFinish` invalidate reconciles it once the reply — and the real,
+  //   auto-titled thread — exists. We deliberately do NOT invalidate here: the
+  //   thread does not exist server-side yet, so an immediate refetch would come
+  //   back without it and wipe the optimistic row.
+  const startChat = (text: string, files: FileUIPart[]) => {
     setError(null);
     setSubmitting(true);
+    lpMark("submit");
     try {
-      // Client-generated so files can be uploaded into the thread's prefix
-      // before the thread itself (or its sandbox) exists.
-      const threadId = newThreadId();
-      const uploaded = files.length
-        ? await uploadFiles(threadId, files)
-        : [];
-      const { id } = await create.mutateAsync({ threadId });
-      setPendingPrompt(id, { text, files: toFileParts(uploaded) });
-      await utils.chats.list.invalidate();
-      router.push(`/chats/${id}`);
+      const threadId = draftThreadId;
+      setPendingPrompt(threadId, { text, files });
+
+      const now = new Date();
+      utils.chats.list.setData(undefined, (prev) => [
+        { id: threadId, title: "New chat", createdAt: now, updatedAt: now },
+        ...(prev ?? []),
+      ]);
+
+      lpMark("navigate");
+      router.push(`/chats/${threadId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start chat.");
       setSubmitting(false);
@@ -55,6 +70,7 @@ export function HomeClient() {
             onSubmit={startChat}
             placeholder="Paste a chapter section, an activity, or name a concept…"
             status={submitting ? "submitted" : "ready"}
+            uploadThreadId={draftThreadId}
           />
           {error ? (
             <p className="text-destructive mt-2 px-1 text-sm">{error}</p>

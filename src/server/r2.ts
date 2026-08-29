@@ -88,3 +88,28 @@ export async function uploadReadUrl(key: string): Promise<string> {
     { expiresIn: PRESIGN_MAX_SECONDS },
   );
 }
+
+/**
+ * A short-lived presigned PUT URL the browser uploads one file straight to.
+ *
+ * Uploads used to pass through the app server; now the browser PUTs bytes
+ * directly to R2, so a large PDF never counts against the function's
+ * request-body limit and never buffers in memory. The `ContentType` is bound
+ * into the signature, so the PUT must send the same `Content-Type` header —
+ * that's how the route pins the object's type without seeing the bytes. Five
+ * minutes is plenty to begin the upload.
+ */
+export async function presignUploadUrl(
+  key: string,
+  contentType: string,
+): Promise<string> {
+  return getSignedUrl(
+    r2(),
+    new PutObjectCommand({
+      Bucket: env.R2_BUCKET_NAME,
+      Key: key,
+      ContentType: contentType,
+    }),
+    { expiresIn: 5 * 60 },
+  );
+}

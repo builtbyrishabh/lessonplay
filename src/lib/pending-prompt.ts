@@ -1,32 +1,42 @@
 import type { FileUIPart } from "ai";
+import { atom, getDefaultStore } from "jotai";
 
 /**
- * Hand-off from the home page to a freshly created chat: the home page creates
- * the thread, stashes the first prompt (text plus any uploaded file parts) here,
- * navigates, and the chat page sends it once on mount. sessionStorage survives
- * the navigation but not a new tab.
+ * Hand-off from the home page to a freshly created chat.
+ *
+ * The home page now uploads attachments the moment they're picked (see
+ * `PromptBox`), so by the time the teacher hits send the files are already in
+ * R2 and this handoff carries **ready** file parts — the chat page dispatches
+ * the first message immediately, with no upload on the critical path.
+ *
+ * It lives in a jotai atom rather than sessionStorage for one reason: the value
+ * has to outlive the component that created it. The home page unmounts on
+ * navigation and a different mounted component (the chat page) reads it after,
+ * so a `useState` cannot bridge them; jotai's default store is a browser-wide
+ * singleton that survives the client navigation (but not a hard refresh — an
+ * accepted trade: on refresh the teacher re-attaches).
  */
-const KEY = (threadId: string) => `lessonplay:pending-prompt:${threadId}`;
-
 export type PendingPrompt = {
   text: string;
-  /** Files already uploaded to R2, as file parts the model can read. */
+  /** Uploaded before send, so the chat page can dispatch without awaiting. */
   files: FileUIPart[];
 };
 
+const pendingPromptAtom = atom<Record<string, PendingPrompt | undefined>>({});
+const store = getDefaultStore();
+
 export function setPendingPrompt(threadId: string, prompt: PendingPrompt) {
-  sessionStorage.setItem(KEY(threadId), JSON.stringify(prompt));
+  store.set(pendingPromptAtom, (prev) => ({ ...prev, [threadId]: prompt }));
 }
 
+/** Read once and clear — a handoff is consumed exactly one time. */
 export function takePendingPrompt(threadId: string): PendingPrompt | null {
-  const raw = sessionStorage.getItem(KEY(threadId));
-  if (raw === null) return null;
-  sessionStorage.removeItem(KEY(threadId));
-  try {
-    const parsed = JSON.parse(raw) as PendingPrompt;
-    return { text: parsed.text ?? "", files: parsed.files ?? [] };
-  } catch {
-    // Older shape (a bare string) or corrupt value — treat as text only.
-    return { text: raw, files: [] };
-  }
+  const prompt = store.get(pendingPromptAtom)[threadId];
+  if (!prompt) return null;
+  store.set(pendingPromptAtom, (prev) => {
+    const next = { ...prev };
+    delete next[threadId];
+    return next;
+  });
+  return prompt;
 }

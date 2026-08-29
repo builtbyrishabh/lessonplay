@@ -51,8 +51,18 @@ export const chatsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const memory = getLessonMemory();
       const thread = await memory.getThreadById({ threadId: input.threadId });
-      if (!thread || thread.resourceId !== ctx.userId) {
+      // A thread that exists but belongs to someone else is a hard 404.
+      if (thread && thread.resourceId !== ctx.userId) {
         throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      // A thread that does not exist YET is the normal case now that the home
+      // page skips `chats.create`: Mastra upserts it on the first message. Serve
+      // an empty conversation so navigating to it renders instead of 404-ing.
+      if (!thread) {
+        return {
+          thread: { id: input.threadId, title: threadTitle(null) },
+          messages: [],
+        };
       }
       const { messages } = await memory.recall({
         threadId: input.threadId,

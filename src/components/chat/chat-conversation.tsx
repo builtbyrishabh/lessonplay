@@ -17,7 +17,7 @@ import { useSettings } from "~/lib/hooks/use-settings";
  * workspace pane beside it can read the same messages.
  */
 export function ChatConversation() {
-  const { messages, status, stop, error, send, streamingMessageId } =
+  const { threadId, messages, status, stop, error, send, streamingMessageId } =
     useChatContext();
   const { settings, updateSettings } = useSettings();
 
@@ -59,6 +59,7 @@ export function ChatConversation() {
           onStop={stop}
           onSubmit={send}
           status={status}
+          uploadThreadId={threadId}
         />
       </div>
     </div>
