@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-// Branch B folds the home surface into the /chats harness (it shows the prompt
-// when there is no ?id=), so the landing route just points there.
+// The signed-in app lives at /chats (the query-param SPA). This landing route
+// just points there for now; a real marketing/login home will replace it later.
 export default function HomePage() {
   redirect("/chats");
 }

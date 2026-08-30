@@ -2,12 +2,12 @@
 
 import type { FileUIPart } from "ai";
 import { useQueryState } from "nuqs";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 
 import { ChatWorkspace } from "~/components/chat/chat-workspace";
 import { SidebarToggleButton } from "~/components/layout/app-shell";
 import { PromptBox } from "~/components/prompt-box";
-import { setChatSeed, takeChatSeed, type ChatSeed } from "~/lib/chat-seed";
+import { type ChatSeed } from "~/lib/chat-seed";
 import { useSettings } from "~/lib/hooks/use-settings";
 import { lpMark } from "~/lib/perf";
 import { newThreadId } from "~/lib/thread-id";
@@ -34,19 +34,12 @@ function ChatsHarness() {
   // and are driven by the seed, so we never fetch (and never miss) for them.
   const recentlyCreatedRef = useRef<Set<string>>(new Set());
 
-  // The seed is consumed once per id (ref-guarded so React strict mode's double
-  // effect can't drop it), then held in state for the conversation to send.
-  const consumedRef = useRef<Set<string>>(new Set());
+  // The first prompt, set synchronously by `startChat` and passed to the
+  // conversation as a prop. Held in state (not a ref) so writing it triggers
+  // the render that mounts the conversation.
   const [committedSeed, setCommittedSeed] = useState<ChatSeed | null>(null);
 
   const isFresh = activeId ? recentlyCreatedRef.current.has(activeId) : false;
-
-  useEffect(() => {
-    if (!activeId || consumedRef.current.has(activeId)) return;
-    consumedRef.current.add(activeId);
-    const seed = takeChatSeed(activeId);
-    if (seed) setCommittedSeed(seed);
-  }, [activeId]);
 
   // Existing threads (opened from the sidebar or a shared link) load their
   // history client-side; freshly-created ones don't.
@@ -62,7 +55,9 @@ function ChatsHarness() {
     const threadId = draftThreadId;
     lpMark("submit");
 
-    setChatSeed({ threadId, text, files });
+    // Set synchronously, before the `?id=` flip below, so the seed is already
+    // in state on the first render that shows the conversation — no gap frame.
+    setCommittedSeed({ threadId, text, files });
     recentlyCreatedRef.current.add(threadId);
 
     const now = new Date();
@@ -103,11 +98,6 @@ function ChatsHarness() {
 
   const seedForActive =
     committedSeed?.threadId === activeId ? committedSeed : null;
-
-  // Freshly-created thread whose seed hasn't been picked up yet (one frame).
-  if (isFresh && !consumedRef.current.has(activeId)) {
-    return <ChatSkeleton />;
-  }
 
   if (!isFresh) {
     if (messagesQuery.isPending) return <ChatSkeleton />;
