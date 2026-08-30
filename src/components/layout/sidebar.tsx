@@ -3,6 +3,7 @@
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { Suspense } from "react";
 
 import { Logo } from "~/components/brand/logo";
@@ -20,6 +21,12 @@ import { api } from "~/trpc/react";
 type SidebarProps = { open: boolean; onToggle: () => void };
 
 export function Sidebar(props: SidebarProps) {
+  // Sidebar and page address the SAME `?id=` param (the nuqs adapter wraps both).
+  // Clearing it is a shallow client update — no route navigation, no RSC — so a
+  // new chat appears in the same frame instead of waiting behind a router
+  // transition (which, mid-stream, was the slow `<Link href="/chats">` path).
+  const [, setActiveId] = useQueryState("id");
+
   return (
     <aside
       className={cn(
@@ -47,12 +54,13 @@ export function Sidebar(props: SidebarProps) {
             </Button>
           </div>
 
-          <Link
+          <button
             className="border-sidebar-border bg-background text-sidebar-foreground hover:bg-accent flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
-            href="/chats"
+            onClick={() => void setActiveId(null)}
+            type="button"
           >
             New Chat
-          </Link>
+          </button>
 
           <Collapsible className="mt-4" defaultOpen>
             <CollapsibleTrigger className="group text-muted-foreground flex w-full items-center gap-1 px-2.5 py-1 text-xs font-medium">
