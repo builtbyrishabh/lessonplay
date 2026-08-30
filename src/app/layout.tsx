@@ -21,6 +21,9 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
+        {/* next-themes rewrites <html>'s className, so the next/font variable
+            classes have to live here. `globals.css` applies `font-sans` to
+            `body` for the same reason. */}
         <body
           className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
         >

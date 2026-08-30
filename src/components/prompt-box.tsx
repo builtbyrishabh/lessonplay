@@ -14,28 +14,15 @@ import {
   type PromptInputMessage,
 } from "~/components/ai-elements/prompt-input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import {
   ArrowUpIcon,
-  ChevronDownIcon,
   CrossSmallIcon,
   FileTextIcon,
   PaperclipIcon,
-  SparklesIcon,
   SpinnerIcon,
   StopIcon,
 } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { toFileParts, uploadFile } from "~/lib/upload";
-import { LESSON_MODELS, type LessonModel } from "~/mastra/agents/lesson-shared";
-
-const MODEL_LABEL = Object.fromEntries(
-  LESSON_MODELS.map((m) => [m.id, m.label]),
-) as Record<LessonModel, string>;
 
 /** Mirrors ALLOWED_TYPES in the upload route — a chapter PDF, a sheet, an image. */
 const ACCEPT = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp";
@@ -65,8 +52,7 @@ export function PromptBox({
   status = "ready",
   disabled = false,
   placeholder = "Describe the chapter, activity, or concept…",
-  model,
-  onModelChange,
+  defaultValue,
   autoFocus = false,
   compact = false,
   className,
@@ -78,8 +64,9 @@ export function PromptBox({
   status?: ChatStatus;
   disabled?: boolean;
   placeholder?: string;
-  model: LessonModel;
-  onModelChange: (model: LessonModel) => void;
+  /** Prefills the composer on mount — used to carry a prompt in from the
+   *  landing page (`/chats?q=…`). The field stays uncontrolled after that. */
+  defaultValue?: string;
   autoFocus?: boolean;
   compact?: boolean;
   className?: string;
@@ -185,6 +172,7 @@ export function PromptBox({
             "min-h-[52px] bg-transparent px-4 pt-3.5 text-base",
             compact && "min-h-[44px] px-3 pt-3 text-sm",
           )}
+          defaultValue={defaultValue}
           disabled={disabled}
           placeholder={placeholder}
         />
@@ -209,29 +197,6 @@ export function PromptBox({
           >
             <PaperclipIcon className="size-4" />
           </PromptInputButton>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <PromptInputButton className="gap-1.5" disabled={disabled}>
-                <SparklesIcon className="size-4" />
-                <span>{MODEL_LABEL[model]}</span>
-                <ChevronDownIcon className="text-muted-foreground size-3.5" />
-              </PromptInputButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {LESSON_MODELS.map((m) => (
-                <DropdownMenuItem key={m.id} onClick={() => onModelChange(m.id)}>
-                  <SparklesIcon className="size-4" />
-                  <div className="flex flex-col">
-                    <span>{m.label}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {m.description}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </PromptInputTools>
 
         <PromptInputTools>

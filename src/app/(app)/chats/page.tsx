@@ -8,7 +8,6 @@ import { ChatWorkspace } from "~/components/chat/chat-workspace";
 import { SidebarToggleButton } from "~/components/layout/app-shell";
 import { PromptBox } from "~/components/prompt-box";
 import { type ChatSeed } from "~/lib/chat-seed";
-import { useSettings } from "~/lib/hooks/use-settings";
 import { lpMark } from "~/lib/perf";
 import { newThreadId } from "~/lib/thread-id";
 import { api } from "~/trpc/react";
@@ -22,8 +21,11 @@ import { api } from "~/trpc/react";
  */
 function ChatsHarness() {
   const utils = api.useUtils();
-  const { settings, updateSettings } = useSettings();
   const [activeId, setActiveId] = useQueryState("id");
+
+  // A prompt carried over from the public landing page. Read once to seed the
+  // composer, then dropped from the URL when the chat starts.
+  const [seedPrompt, setSeedPrompt] = useQueryState("q");
 
   // A thread id minted up front so a file can upload into its prefix before the
   // thread exists (see PromptBox). Re-minted after each new chat starts, so the
@@ -69,6 +71,7 @@ function ChatsHarness() {
     lpMark("navigate");
     // Shallow by default: the URL changes, this page stays mounted, no RSC.
     void setActiveId(threadId);
+    if (seedPrompt !== null) void setSeedPrompt(null);
     setDraftThreadId(newThreadId());
   };
 
@@ -84,8 +87,7 @@ function ChatsHarness() {
             </h1>
             <PromptBox
               autoFocus
-              model={settings.model}
-              onModelChange={(model) => updateSettings({ model })}
+              defaultValue={seedPrompt ?? undefined}
               onSubmit={startChat}
               placeholder="Paste a chapter section, an activity, or name a concept…"
               uploadThreadId={draftThreadId}

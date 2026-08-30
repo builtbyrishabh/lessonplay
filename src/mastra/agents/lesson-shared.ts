@@ -2,21 +2,23 @@
  * Constants shared by the lesson agent factory and every route that drives it.
  * Model ids are AI Gateway strings ("vercel/<provider>/<model>").
  */
+
+/**
+ * The allow-list, and the only place a model is enabled. Everything else runs
+ * through `resolveLessonModel`, so trimming this array is enough to lock the
+ * app to one model — stored settings and request bodies naming a removed model
+ * fall back to the default rather than erroring.
+ *
+ * Currently OpenAI GPT 5.6 Luna only, and the composer no longer offers a
+ * picker. Re-enabling choice means adding entries here AND restoring the
+ * dropdown in `prompt-box.tsx`; the request-body plumbing (`use-settings` →
+ * `chat-provider` → `resolveLessonModel` in the chat route) is still intact.
+ */
 export const LESSON_MODELS = [
   {
     id: "vercel/openai/gpt-5.6-luna",
     label: "GPT 5.6 Luna",
     description: "Default. Thinks it through.",
-  },
-  {
-    id: "vercel/meta/muse-spark-1.2-contributor",
-    label: "Muse Spark 1.2",
-    description: "Meta contributor model.",
-  },
-  {
-    id: "vercel/xai/grok-4.6",
-    label: "Grok 4.6",
-    description: "xAI's latest.",
   },
 ] as const;
 

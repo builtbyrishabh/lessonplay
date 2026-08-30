@@ -99,7 +99,14 @@ export async function getOrCreateSandbox(
     snapshot: env.DAYTONA_SNAPSHOT,
     language: "typescript",
     autoStopInterval: 30, // minutes idle → stopped (disk kept, R2 mount must be redone)
-    autoArchiveInterval: 0, // 0 = platform maximum; keeps it in the fast-restore tier
+    // Minutes STOPPED before the filesystem moves to object storage and the
+    // 3 GiB disk reservation is released. Was 0 — which is not "never" but the
+    // platform maximum of 7 days, and a stopped sandbox holds its disk the
+    // whole time. At ~3 GiB each against a 30 GiB org cap that fills in about
+    // three days, so reclaim has to outrun it. Archiving is lossless (unlike
+    // autoDelete) and needs no new code path: getOrCreateSandbox already
+    // start()s an ARCHIVED sandbox. Cost is a slower restore on a cold thread.
+    autoArchiveInterval: 60,
     autoDeleteInterval: -1, // never auto-delete; recreating means a fresh npm ci
     envVars: opts.env,
   });
