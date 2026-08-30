@@ -65,7 +65,18 @@ tools + publish gate → 3) deploy.
 
 UI: ported from Vercel's v0-clone (`create-v0-sdk-app -e v0-clone`) onto shadcn (radix-nova)
 + ai-elements. Geist font + geist-icons only (`src/lib/icons.ts`), next-themes.
+next/font puts `--font-geist-sans` on `<body>` (next-themes owns `<html>`'s class), so
+`globals.css` re-declares `--font-sans`/`--font-mono` on `body` — at `:root` they resolve
+to guaranteed-invalid and everything falls back to Times New Roman.
 - `src/app/(app)/` — route group wrapped in `AppShell` (collapsible sidebar); sign-in/up stay bare.
+- `src/app/(marketing)/` — the PUBLIC homepage at `/` (the only non-auth route besides
+  sign-in/up; see `middleware.ts`). Own bare layout, statically prerendered, sections in
+  `components/marketing/`. Its hero composer hands the prompt to the studio as
+  `/chats?q=…` (through a `redirect_url` sign-up hop when signed out); `chats/page.tsx`
+  reads `q` into the composer once and drops it from the URL.
+  Marketing-only design tokens (`--lp-*`) live at the end of `globals.css` — `--lp-violet`
+  is the adaptive text/icon accent, `--lp-brand`/`--lp-on-brand` the filled-surface pair
+  that must hold contrast in BOTH themes.
 - `components/layout/` app-shell, sidebar (tRPC `chats.list`), chat-item (rename/delete)
 - `components/home/home-client.tsx` — landing prompt; creates a thread, hands the first
   prompt off via sessionStorage (`lib/pending-prompt.ts`), navigates to `/chats/[id]`

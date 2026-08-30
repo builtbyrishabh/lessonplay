@@ -65,6 +65,7 @@ export function PromptBox({
   status = "ready",
   disabled = false,
   placeholder = "Describe the chapter, activity, or concept…",
+  defaultValue,
   model,
   onModelChange,
   autoFocus = false,
@@ -78,6 +79,9 @@ export function PromptBox({
   status?: ChatStatus;
   disabled?: boolean;
   placeholder?: string;
+  /** Prefills the composer on mount — used to carry a prompt in from the
+   *  landing page (`/chats?q=…`). The field stays uncontrolled after that. */
+  defaultValue?: string;
   model: LessonModel;
   onModelChange: (model: LessonModel) => void;
   autoFocus?: boolean;
@@ -185,6 +189,7 @@ export function PromptBox({
             "min-h-[52px] bg-transparent px-4 pt-3.5 text-base",
             compact && "min-h-[44px] px-3 pt-3 text-sm",
           )}
+          defaultValue={defaultValue}
           disabled={disabled}
           placeholder={placeholder}
         />

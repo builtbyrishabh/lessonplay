@@ -25,6 +25,10 @@ function ChatsHarness() {
   const { settings, updateSettings } = useSettings();
   const [activeId, setActiveId] = useQueryState("id");
 
+  // A prompt carried over from the public landing page. Read once to seed the
+  // composer, then dropped from the URL when the chat starts.
+  const [seedPrompt, setSeedPrompt] = useQueryState("q");
+
   // A thread id minted up front so a file can upload into its prefix before the
   // thread exists (see PromptBox). Re-minted after each new chat starts, so the
   // next chat — and any file attached for it — gets a fresh, uncollided id.
@@ -69,6 +73,7 @@ function ChatsHarness() {
     lpMark("navigate");
     // Shallow by default: the URL changes, this page stays mounted, no RSC.
     void setActiveId(threadId);
+    if (seedPrompt !== null) void setSeedPrompt(null);
     setDraftThreadId(newThreadId());
   };
 
@@ -84,6 +89,7 @@ function ChatsHarness() {
             </h1>
             <PromptBox
               autoFocus
+              defaultValue={seedPrompt ?? undefined}
               model={settings.model}
               onModelChange={(model) => updateSettings({ model })}
               onSubmit={startChat}

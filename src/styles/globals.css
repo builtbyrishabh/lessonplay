@@ -140,3 +140,130 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+/* ---------------------------------------------------------------------------
+ * Marketing surface (the public homepage).
+ *
+ * The app itself is deliberately monochrome; the landing page is where the
+ * brand gets to speak. These tokens live alongside the shadcn ones rather than
+ * replacing them, so nothing inside `(app)` changes. Both themes are defined —
+ * the page is reachable signed-out, where `system` decides.
+ * ------------------------------------------------------------------------ */
+:root {
+  --lp-violet: oklch(0.53 0.22 292);
+  /* Filled surfaces (buttons, the chat bubble, the CTA band) always carry
+     white text, so this one may NOT lighten in dark mode the way the
+     text/icon violet does — it has to hold 4.5:1 against white in both. */
+  --lp-brand: oklch(0.53 0.22 292);
+  --lp-brand-2: oklch(0.52 0.15 233);
+  --lp-on-brand: oklch(1 0 0);
+  --lp-cyan: oklch(0.58 0.12 213);
+  --lp-amber: oklch(0.65 0.15 68);
+  --lp-lime: oklch(0.58 0.15 145);
+  --lp-grid: oklch(0.145 0 0 / 5%);
+  --lp-glow-a: oklch(0.62 0.2 292 / 18%);
+  --lp-glow-b: oklch(0.7 0.13 200 / 16%);
+}
+
+.dark {
+  --lp-violet: oklch(0.75 0.16 292);
+  --lp-brand: oklch(0.56 0.23 292);
+  --lp-brand-2: oklch(0.54 0.16 233);
+  --lp-on-brand: oklch(1 0 0);
+  --lp-cyan: oklch(0.79 0.11 205);
+  --lp-amber: oklch(0.82 0.14 72);
+  --lp-lime: oklch(0.78 0.16 148);
+  --lp-grid: oklch(1 0 0 / 6%);
+  --lp-glow-a: oklch(0.55 0.24 292 / 26%);
+  --lp-glow-b: oklch(0.6 0.16 205 / 20%);
+}
+
+@theme inline {
+  --color-lp-violet: var(--lp-violet);
+  --color-lp-brand: var(--lp-brand);
+  --color-lp-on-brand: var(--lp-on-brand);
+  --color-lp-cyan: var(--lp-cyan);
+  --color-lp-amber: var(--lp-amber);
+  --color-lp-lime: var(--lp-lime);
+}
+
+@layer components {
+  /* Faint graph-paper ground, the way a lab notebook page reads. */
+  .lp-grid-bg {
+    background-image:
+      linear-gradient(to right, var(--lp-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--lp-grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Scroll-reveal: elements start displaced and settle once observed. The
+     no-JS / reduced-motion path below makes the resting state the default. */
+  .lp-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--lp-delay, 0ms);
+  }
+  .lp-reveal[data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .lp-float,
+  .lp-bubble,
+  .lp-caret {
+    animation: none !important;
+  }
+}
+
+@keyframes lp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.lp-float {
+  animation: lp-float 7s ease-in-out infinite;
+}
+
+@keyframes lp-bubble {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-46px) scale(1.15);
+    opacity: 0;
+  }
+}
+.lp-bubble {
+  animation: lp-bubble 3.2s ease-in infinite;
+}
+
+@keyframes lp-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.lp-caret {
+  animation: lp-caret 1.1s step-end infinite;
+}
