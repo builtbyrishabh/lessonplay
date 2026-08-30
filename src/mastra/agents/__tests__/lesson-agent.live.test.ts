@@ -1,7 +1,8 @@
 /**
  * Live smoke test: real AI Gateway model + real Postgres through the factory.
  * Run: LIVE_MODEL=1 AI_GATEWAY_API_KEY=... DATABASE_URL=... npx vitest run lesson-agent.live
- * Optionally LIVE_MODEL_ID=vercel/xai/grok-4.6 to target one model.
+ * Optionally LIVE_MODEL_ID=<allow-listed id> to target one model; anything not
+ * in LESSON_MODELS resolves to the default.
  */
 import type { UIMessage } from "ai";
 import { describe, expect, it } from "vitest";

@@ -10,7 +10,6 @@ import { Shimmer } from "~/components/ai-elements/shimmer";
 import { useChatContext } from "~/components/chat/chat-provider";
 import { MessageParts } from "~/components/chat/message-parts";
 import { PromptBox } from "~/components/prompt-box";
-import { useSettings } from "~/lib/hooks/use-settings";
 
 /**
  * The conversation column. Stream state lives in `ChatProvider` so the
@@ -19,7 +18,6 @@ import { useSettings } from "~/lib/hooks/use-settings";
 export function ChatConversation() {
   const { threadId, messages, status, stop, error, send, streamingMessageId } =
     useChatContext();
-  const { settings, updateSettings } = useSettings();
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -54,8 +52,6 @@ export function ChatConversation() {
       <div className="mx-auto w-full max-w-3xl shrink-0 px-3 pb-3">
         <PromptBox
           compact
-          model={settings.model}
-          onModelChange={(model) => updateSettings({ model })}
           onStop={stop}
           onSubmit={send}
           status={status}

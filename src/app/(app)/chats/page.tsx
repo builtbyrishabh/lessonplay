@@ -8,7 +8,6 @@ import { ChatWorkspace } from "~/components/chat/chat-workspace";
 import { SidebarToggleButton } from "~/components/layout/app-shell";
 import { PromptBox } from "~/components/prompt-box";
 import { type ChatSeed } from "~/lib/chat-seed";
-import { useSettings } from "~/lib/hooks/use-settings";
 import { lpMark } from "~/lib/perf";
 import { newThreadId } from "~/lib/thread-id";
 import { api } from "~/trpc/react";
@@ -22,7 +21,6 @@ import { api } from "~/trpc/react";
  */
 function ChatsHarness() {
   const utils = api.useUtils();
-  const { settings, updateSettings } = useSettings();
   const [activeId, setActiveId] = useQueryState("id");
 
   // A prompt carried over from the public landing page. Read once to seed the
@@ -90,8 +88,6 @@ function ChatsHarness() {
             <PromptBox
               autoFocus
               defaultValue={seedPrompt ?? undefined}
-              model={settings.model}
-              onModelChange={(model) => updateSettings({ model })}
               onSubmit={startChat}
               placeholder="Paste a chapter section, an activity, or name a concept…"
               uploadThreadId={draftThreadId}
