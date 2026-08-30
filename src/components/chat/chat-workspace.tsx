@@ -5,6 +5,7 @@ import type { UIMessage } from "ai";
 import { ChatConversation } from "~/components/chat/chat-conversation";
 import { ChatHeader } from "~/components/chat/chat-header";
 import { ChatProvider } from "~/components/chat/chat-provider";
+import type { ChatSeed } from "~/lib/chat-seed";
 import { WorkspacePane } from "~/components/chat/workspace-pane";
 import {
   ResizableHandle,
@@ -24,13 +25,16 @@ export function ChatWorkspace({
   threadId,
   title,
   messages,
+  seed = null,
 }: {
   threadId: string;
   title: string;
   messages: UIMessage[];
+  /** First prompt to auto-send on a freshly-created thread (Branch B). */
+  seed?: ChatSeed | null;
 }) {
   return (
-    <ChatProvider initialMessages={messages} threadId={threadId}>
+    <ChatProvider initialMessages={messages} seed={seed} threadId={threadId}>
       <div className="flex h-full min-h-0 flex-col">
         <ChatHeader threadId={threadId} title={title} />
         {/* Mobile: conversation only. */}

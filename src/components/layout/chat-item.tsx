@@ -79,7 +79,7 @@ export function ChatItem({
             "min-w-0 flex-1 truncate py-1.5 pr-7 pl-2.5",
             isActive && "font-medium",
           )}
-          href={`/chats/${thread.id}`}
+          href={`/chats?id=${thread.id}`}
         >
           {thread.title}
         </Link>

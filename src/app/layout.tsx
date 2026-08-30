@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -31,7 +32,11 @@ export default function RootLayout({
             storageKey="theme"
           >
             <TRPCReactProvider>
-              <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+              <NuqsAdapter>
+                <TooltipProvider delayDuration={300}>
+                  {children}
+                </TooltipProvider>
+              </NuqsAdapter>
             </TRPCReactProvider>
           </ThemeProvider>
         </body>

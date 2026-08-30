@@ -15,10 +15,10 @@ import {
 
 import type { FileUIPart } from "ai";
 
+import type { ChatSeed } from "~/lib/chat-seed";
 import { deriveGameFiles, type GameFilesState } from "~/lib/game-files";
 import { useSettings } from "~/lib/hooks/use-settings";
 import { lpMark } from "~/lib/perf";
-import { takePendingPrompt } from "~/lib/pending-prompt";
 import { api } from "~/trpc/react";
 
 /**
@@ -57,10 +57,13 @@ export function useChatContext(): ChatContextValue {
 export function ChatProvider({
   threadId,
   initialMessages,
+  seed = null,
   children,
 }: {
   threadId: string;
   initialMessages: UIMessage[];
+  /** First prompt to auto-send — handed from the home surface via the seed atom. */
+  seed?: ChatSeed | null;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -69,7 +72,7 @@ export function ChatProvider({
   const hadTitleRef = useRef(initialMessages.length > 0);
   const sentPendingRef = useRef(false);
   // Only instrument the home → first-message path (a thread we arrived at with
-  // a pending handoff), never an existing thread opened from the sidebar.
+  // a seed), never an existing thread opened from the sidebar.
   const measuringRef = useRef(false);
   const userPaintRef = useRef(false);
   const firstTokenRef = useRef(false);
@@ -121,18 +124,16 @@ export function ChatProvider({
     [dispatch],
   );
 
-  // First prompt handed off from the home page. Its files were uploaded on the
-  // home page as they were attached, so the handoff carries ready file parts —
-  // we dispatch straight away, nothing on the critical path to await.
+  // First prompt seeded from the home surface. Its files were uploaded there as
+  // they were attached, so the seed carries ready file parts — we dispatch
+  // straight away, nothing on the critical path to await.
   useEffect(() => {
-    if (sentPendingRef.current) return;
+    if (sentPendingRef.current || !seed) return;
     sentPendingRef.current = true;
-    const pending = takePendingPrompt(threadId);
-    if (!pending) return;
     measuringRef.current = true;
     lpMark("provider-mount");
     lpMark("dispatch");
-    dispatch(pending.text, pending.files);
+    dispatch(seed.text, seed.files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId]);
 

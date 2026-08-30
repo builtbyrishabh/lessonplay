@@ -2,7 +2,7 @@
 
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 import { Logo } from "~/components/brand/logo";
@@ -32,7 +32,7 @@ export function Sidebar(props: SidebarProps) {
           <div className="mb-1 flex items-center gap-1">
             <Link
               className="text-sidebar-foreground flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-sm font-medium"
-              href="/"
+              href="/chats"
             >
               <Logo />
             </Link>
@@ -49,7 +49,7 @@ export function Sidebar(props: SidebarProps) {
 
           <Link
             className="border-sidebar-border bg-background text-sidebar-foreground hover:bg-accent flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
-            href="/"
+            href="/chats"
           >
             New Chat
           </Link>
@@ -75,7 +75,7 @@ export function Sidebar(props: SidebarProps) {
 }
 
 function ChatList() {
-  const pathname = usePathname();
+  const activeId = useSearchParams().get("id");
   const router = useRouter();
   const [threads] = api.chats.list.useSuspenseQuery();
 
@@ -87,10 +87,10 @@ function ChatList() {
 
   return threads.map((thread) => (
     <ChatItem
-      isActive={pathname === `/chats/${thread.id}`}
+      isActive={activeId === thread.id}
       key={thread.id}
       onDeleted={(id) => {
-        if (pathname === `/chats/${id}`) router.push("/");
+        if (activeId === id) router.push("/chats");
       }}
       thread={thread}
     />
