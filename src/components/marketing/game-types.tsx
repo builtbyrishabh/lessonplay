@@ -20,7 +20,7 @@ const GAMES = [
     icon: DropletIcon,
     kicker: "Guided lab",
     title: "Run the experiment properly",
-    body: "A faithful, phone-shaped run of a classroom activity: set up the apparatus, do it in the right order, and watch the real consequence of getting the order wrong. The NCERT activity, with the student's hands on it.",
+    body: "A faithful, phone-shaped run of a textbook activity: set up the apparatus, do it in the right order, and watch the real consequence of getting the order wrong. The NCERT activity, with your hands on it.",
     fits: [
       "Filtration, evaporation and crystallisation",
       "Paper chromatography end to end",

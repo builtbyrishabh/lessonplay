@@ -5,27 +5,31 @@ import { PlusIcon } from "~/lib/icons";
 const FAQS = [
   {
     q: "Do I need to know how to code?",
-    a: "No. You write the way you'd brief a teaching assistant — in sentences. The studio writes and tests the code itself; the code panel is there if you're curious, not because you need it.",
+    a: "No. You write the way you'd brief a helpful assistant — in sentences. The studio writes and tests the code itself; the code panel is there if you're curious, not because you need it.",
   },
   {
     q: "What subjects work right now?",
-    a: "Chemistry only. The beta is deliberately narrow: secondary-school chemistry, the kind of content in a Class 9–12 chapter. Physics and biology use the same engine and are next.",
+    a: "Chemistry only. The beta is deliberately narrow: school chemistry, classes 8–10 — the kind of content in an NCERT chapter. Physics and biology use the same engine and are next.",
   },
   {
     q: "How long does a game take to build?",
     a: "A first playable version usually lands in a few minutes, while you watch. Tightening it — difficulty, wording, an extra level — is a sentence at a time after that.",
   },
   {
-    q: "Can I hand it to students?",
-    a: "Yes. Publishing gives you a link that plays in any browser, on a phone or a lab machine. Students don't sign up for anything, and the link keeps working after you make changes.",
+    q: "Can I share it with someone else?",
+    a: "Yes. Publishing gives you a link that plays in any browser, on a phone or a shared machine. Whoever opens it doesn't sign up for anything, and the link keeps working after you make changes.",
   },
   {
     q: "What if the game gets the chemistry wrong?",
     a: "You're the check that matters, and you play it before anyone else does. Tell it what's wrong in plain words and it edits the simulation — and nothing publishes until it passes the validation gate again.",
   },
   {
+    q: "How finished is this?",
+    a: "Not very, and we'd rather say so. One game template today, a narrow slice of chemistry, and rough edges you will find. We're iterating in the open — the engine, the templates and the validation gate all move week to week. Try it, tell us where it falls short, and expect it to have changed by the time you come back.",
+  },
+  {
     q: "What does it cost?",
-    a: "Nothing during the beta. We'd rather have teachers using it and telling us what breaks than a pricing page.",
+    a: "Nothing during the beta. We'd rather have people using it and telling us what breaks than a pricing page.",
   },
 ] as const;
 
@@ -37,7 +41,7 @@ export function Faq() {
           <SectionHeading
             className="lg:sticky lg:top-24"
             eyebrow="Questions"
-            title="The things teachers ask first"
+            title="The things people ask first"
           />
 
           <ul className="flex flex-col">

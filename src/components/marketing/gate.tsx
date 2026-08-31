@@ -24,7 +24,7 @@ const CHECKS = [
   {
     icon: LayersIcon,
     name: "It's been won",
-    body: "The game is played all the way to a win through the same logic your students will hit. If it can't be finished, it isn't finished.",
+    body: "The game is played all the way to a win through the same logic a player will hit. If it can't be finished, it isn't finished.",
     stamp: "replay",
   },
 ] as const;

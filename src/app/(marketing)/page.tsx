@@ -10,13 +10,13 @@ import { HowItWorks } from "~/components/marketing/how-it-works";
 import { StudioDemo } from "~/components/marketing/studio-demo";
 
 export const metadata: Metadata = {
-  title: "LessonPlay — turn a chemistry chapter into a game your class plays",
+  title: "LessonPlay — turn a chemistry chapter into a game anyone can play",
   description:
-    "Describe a lesson and LessonPlay builds a playable chemistry lab simulation — play-tested before you see it, and shared with your class as one link. Free beta.",
+    "Describe a lesson and LessonPlay builds a playable chemistry lab simulation — play-tested before you see it, and shared as one link. Chemistry for classes 8-10. Free beta.",
   openGraph: {
     title: "LessonPlay — your chemistry chapter, as a game",
     description:
-      "Describe a lesson. Get a real, playable lab simulation your students can reason their way through. Free beta.",
+      "Describe a lesson. Get a real, playable lab simulation you can reason your way through. Free beta.",
     type: "website",
   },
 };

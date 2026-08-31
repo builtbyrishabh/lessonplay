@@ -11,12 +11,12 @@ const POINTS = [
   {
     icon: ShareIcon,
     title: "One link, any device",
-    body: "Phones, the lab desktops, a projector at the front. Students click and play — no accounts, no installs, nothing for IT to approve.",
+    body: "A phone, a shared laptop, a projector at the front. Whoever opens the link just plays — no accounts, no installs, nothing to approve.",
   },
   {
     icon: ClockIcon,
-    title: "Fits a period",
-    body: "Games are built to be finished in a class, not a term. Levels are short enough to run one as a warm-up or hand the whole thing out as homework.",
+    title: "Fits one sitting",
+    body: "Games are built to be finished in one sitting, not a term. Short enough for a warm-up, a revision block, or an idle evening with one chapter.",
   },
   {
     icon: UsersIcon,
@@ -37,9 +37,9 @@ export function Classroom() {
         <div className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:items-start lg:gap-16">
           <SectionHeading
             className="lg:sticky lg:top-24"
-            eyebrow="In the classroom"
-            lead="Built around how a lesson actually runs — a shared link, a short session, and a teacher who wants to change one thing after seeing it used."
-            title="Made for a real period, not a demo"
+            eyebrow="In practice"
+            lead="Built around how this actually gets used — a shared link, a short session, and whoever made it wanting to change one thing after watching it played."
+            title="Made to be used, not demoed"
           />
 
           <ul className="grid gap-5 sm:grid-cols-2">

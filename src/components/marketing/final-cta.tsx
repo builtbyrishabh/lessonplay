@@ -26,7 +26,7 @@ export function FinalCta() {
             />
 
             <h2 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              Pick the chapter you&rsquo;re teaching next week.
+              Pick any chapter and see what it becomes.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-pretty text-white/85">
               Paste it in and see what comes back. It takes one sentence and a
@@ -50,7 +50,7 @@ export function FinalCta() {
             </div>
 
             <p className="mt-7 text-xs text-white/70">
-              Free beta · Chemistry chapters · No card, no install
+              Free beta · Chemistry, classes 8–10 · No card, no install
             </p>
           </div>
         </Reveal>

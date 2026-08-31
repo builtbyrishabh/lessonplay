@@ -146,7 +146,7 @@ export function Hero() {
               <span className="bg-lp-lime relative flex size-1.5 rounded-full">
                 <span className="bg-lp-lime absolute inline-flex size-full animate-ping rounded-full opacity-60" />
               </span>
-              Free beta — chemistry chapters first
+              Free beta — chemistry, classes 8–10
             </span>
           </Reveal>
 
@@ -184,13 +184,13 @@ export function Hero() {
           <Reveal delay={120}>
             <p className="text-muted-foreground mt-6 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
               Describe a lesson — or paste the chapter straight in. LessonPlay
-              builds a real, playable lab simulation your students can reason
-              their way through, then hands you one link to share with the class.
+              builds a real, playable lab simulation you can reason your way
+              through, then hands you one link to keep or pass on.
             </p>
           </Reveal>
 
           {/* The composer is the hero. Everything above it exists to get a
-              teacher to type one sentence here. */}
+              someone to type one sentence here. */}
           <Reveal className="mt-9 w-full" delay={180}>
             <form
               className={cn(
