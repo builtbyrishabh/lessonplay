@@ -21,6 +21,13 @@ const COLUMNS = [
       { label: "Open the studio", href: "/chats" },
     ],
   },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+    ],
+  },
 ] as const;
 
 export function MarketingFooter() {
@@ -36,7 +43,7 @@ export function MarketingFooter() {
             </p>
           </div>
 
-          <div className="flex gap-14">
+          <div className="flex flex-wrap gap-x-14 gap-y-8">
             {COLUMNS.map((column) => (
               <div key={column.heading}>
                 <h2 className="text-foreground text-xs font-semibold tracking-[0.12em] uppercase">
@@ -61,15 +68,7 @@ export function MarketingFooter() {
 
         <div className="border-border/70 text-muted-foreground mt-12 flex flex-col gap-2 border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} LessonPlay</p>
-          <div className="flex items-center gap-5">
-            <p>Beta — chemistry only, for now.</p>
-            <Link className="hover:text-foreground transition-colors" href="/privacy">
-              Privacy
-            </Link>
-            <Link className="hover:text-foreground transition-colors" href="/terms">
-              Terms
-            </Link>
-          </div>
+          <p>Beta — chemistry only, for now.</p>
         </div>
       </Container>
     </footer>
