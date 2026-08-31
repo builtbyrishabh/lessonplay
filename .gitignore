@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Files git should never track. See CONTRIBUTING.md for the ones you DO need locally.
 
 # dependencies
 node_modules/
@@ -7,11 +7,6 @@ node_modules/
 
 # testing
 /coverage
-
-# database
-/prisma/db.sqlite
-/prisma/db.sqlite-journal
-db.sqlite
 
 # next.js
 /.next/
@@ -32,7 +27,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+# Never commit a .env — only .env.example. Real keys belong in your shell or host.
 .env
 .env*.local
 

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App — typecheck & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      # vitest sets SKIP_ENV_VALIDATION itself, so no secrets are needed here.
+      - run: pnpm test
+
+  engine:
+    name: Engine — test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: game-engine/package-lock.json
+
+      - run: npm ci
+
+      - run: npm test
+
+  skills:
+    name: Skills mirrors in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .agents/skills and .claude/skills must stay byte-identical — the app
+      # serves one and editors read the other.
+      - name: Diff .agents/skills against .claude/skills
+        run: |
+          if ! diff -r .agents/skills .claude/skills; then
+            echo "::error::.agents/skills and .claude/skills have drifted. Mirror your edit into both."
+            exit 1
+          fi
+          echo "Skills mirrors are in sync."
