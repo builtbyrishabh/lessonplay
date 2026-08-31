@@ -61,7 +61,15 @@ export function MarketingFooter() {
 
         <div className="border-border/70 text-muted-foreground mt-12 flex flex-col gap-2 border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} LessonPlay</p>
-          <p>Beta — chemistry only, for now.</p>
+          <div className="flex items-center gap-5">
+            <p>Beta — chemistry only, for now.</p>
+            <Link className="hover:text-foreground transition-colors" href="/privacy">
+              Privacy
+            </Link>
+            <Link className="hover:text-foreground transition-colors" href="/terms">
+              Terms
+            </Link>
+          </div>
         </div>
       </Container>
     </footer>

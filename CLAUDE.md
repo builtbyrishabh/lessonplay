@@ -69,9 +69,11 @@ next/font puts `--font-geist-sans` on `<body>` (next-themes owns `<html>`'s clas
 `globals.css` re-declares `--font-sans`/`--font-mono` on `body` — at `:root` they resolve
 to guaranteed-invalid and everything falls back to Times New Roman.
 - `src/app/(app)/` — route group wrapped in `AppShell` (collapsible sidebar); sign-in/up stay bare.
-- `src/app/(marketing)/` — the PUBLIC homepage at `/` (the only non-auth route besides
-  sign-in/up; see `middleware.ts`). Own bare layout, statically prerendered, sections in
-  `components/marketing/`. Its hero composer hands the prompt to the studio as
+- `src/app/(marketing)/` — the PUBLIC pages: the homepage at `/` plus `/privacy` and
+  `/terms` (with sign-in/up, the only non-auth routes; see `middleware.ts`). The legal
+  pages must stay public — Google's OAuth review fetches them signed-out, and a redirect
+  to sign-in reads to it as a broken link. Own bare layout, statically prerendered,
+  sections in `components/marketing/`; the two legal pages share `marketing/legal.tsx`. Its hero composer hands the prompt to the studio as
   `/chats?q=…` (through a `redirect_url` sign-up hop when signed out); `chats/page.tsx`
   reads `q` into the composer once and drops it from the URL.
   Marketing-only design tokens (`--lp-*`) live at the end of `globals.css` — `--lp-violet`
