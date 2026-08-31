@@ -59,7 +59,7 @@ Every game ships as one self-contained `index.html` (~0.3–1.5 MB). No install,
 plugin, no account for the student. A teacher shares a link; it opens in any
 browser.
 
-<sub>Pictured: the `chemistry-lab-bench` starter template, built straight from this repo.</sub>
+<sub>Pictured: <i>The Separation Station</i> — a real game built and published by the studio.</sub>
 
 </td>
 </tr>
