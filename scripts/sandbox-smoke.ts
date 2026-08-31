@@ -116,7 +116,11 @@ try {
   );
   assert(
     landed.stdout.includes("1.tar.gz") && landed.stdout.includes("2.tar.gz"),
-    "each version is a single object",
+    "each version's source is a single object",
+  );
+  assert(
+    landed.stdout.includes("1.html") && landed.stdout.includes("2.html"),
+    "each version keeps its own build, so old versions stay previewable",
   );
   assert(
     !landed.stdout.includes("node_modules"),
@@ -168,9 +172,13 @@ try {
     "multi-file dist is refused",
     refused,
   );
-  const untouched = await runCommand(sandbox, `ls -1 ${R2_VERSIONS_DIR}`);
+  // Count tarballs, not entries: each version is a snapshot AND its build.
+  const untouched = await runCommand(
+    sandbox,
+    `ls -1 ${R2_VERSIONS_DIR} | grep -c '\\.tar\\.gz$'`,
+  );
   assert(
-    untouched.stdout.trim().split("\n").filter(Boolean).length === 2,
+    untouched.stdout.trim() === "2",
     "the refused publish created no version 3",
     untouched,
   );

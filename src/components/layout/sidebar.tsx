@@ -2,9 +2,11 @@
 
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { Suspense } from "react";
 
+import { Logo } from "~/components/brand/logo";
 import { ChatItem } from "~/components/layout/chat-item";
 import { Button } from "~/components/ui/button";
 import {
@@ -19,6 +21,12 @@ import { api } from "~/trpc/react";
 type SidebarProps = { open: boolean; onToggle: () => void };
 
 export function Sidebar(props: SidebarProps) {
+  // Sidebar and page address the SAME `?id=` param (the nuqs adapter wraps both).
+  // Clearing it is a shallow client update — no route navigation, no RSC — so a
+  // new chat appears in the same frame instead of waiting behind a router
+  // transition (which, mid-stream, was the slow `<Link href="/chats">` path).
+  const [, setActiveId] = useQueryState("id");
+
   return (
     <aside
       className={cn(
@@ -31,12 +39,9 @@ export function Sidebar(props: SidebarProps) {
           <div className="mb-1 flex items-center gap-1">
             <Link
               className="text-sidebar-foreground flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-sm font-medium"
-              href="/"
+              href="/chats"
             >
-              <span className="bg-foreground text-background flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold">
-                L
-              </span>
-              <span className="truncate">LessonPlay</span>
+              <Logo />
             </Link>
             <Button
               aria-label="Collapse sidebar"
@@ -49,12 +54,13 @@ export function Sidebar(props: SidebarProps) {
             </Button>
           </div>
 
-          <Link
+          <button
             className="border-sidebar-border bg-background text-sidebar-foreground hover:bg-accent flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
-            href="/"
+            onClick={() => void setActiveId(null)}
+            type="button"
           >
             New Chat
-          </Link>
+          </button>
 
           <Collapsible className="mt-4" defaultOpen>
             <CollapsibleTrigger className="group text-muted-foreground flex w-full items-center gap-1 px-2.5 py-1 text-xs font-medium">
@@ -77,7 +83,7 @@ export function Sidebar(props: SidebarProps) {
 }
 
 function ChatList() {
-  const pathname = usePathname();
+  const activeId = useSearchParams().get("id");
   const router = useRouter();
   const [threads] = api.chats.list.useSuspenseQuery();
 
@@ -89,10 +95,10 @@ function ChatList() {
 
   return threads.map((thread) => (
     <ChatItem
-      isActive={pathname === `/chats/${thread.id}`}
+      isActive={activeId === thread.id}
       key={thread.id}
       onDeleted={(id) => {
-        if (pathname === `/chats/${id}`) router.push("/");
+        if (activeId === id) router.push("/chats");
       }}
       thread={thread}
     />

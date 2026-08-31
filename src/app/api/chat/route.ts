@@ -1,15 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { toAISdkStream } from "@mastra/ai-sdk";
 import {
-  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   type UIMessage,
 } from "ai";
 
-import { env } from "~/env";
 import { publishedGameKey } from "~/lib/sandbox-paths";
 import { isValidThreadId } from "~/lib/thread-id";
+import { recordGameVersion } from "~/server/db/games";
+import { publicObjectUrl } from "~/server/r2";
 import { prepareLessonSandbox } from "~/server/sandbox/prepare";
 import { createLessonAgent } from "~/mastra/agents/lesson-agent";
 import {
@@ -64,7 +64,11 @@ export async function POST(req: Request) {
   }
 
   const model = resolveLessonModel(body.model);
-  log("request.parsed", { threadId, model });
+  log("request.parsed", {
+    threadId,
+    model,
+    attachments: message.parts.filter((p) => p.type === "file").length,
+  });
 
   // Kick the sandbox off first and DO NOT await it — boot, R2 mount and the
   // restore of the last published source all run while the agent is assembled
@@ -73,26 +77,29 @@ export async function POST(req: Request) {
   const trace = { id: traceId, log };
   const sandboxPromise = prepareLessonSandbox({ threadId, userId, trace });
 
-  // Stable for the life of the thread: every publish overwrites this one key,
-  // so the teacher's link never changes.
-  const publishedUrl = env.R2_PUBLIC_BASE_URL
-    ? `${env.R2_PUBLIC_BASE_URL.replace(/\/+$/, "")}/${publishedGameKey(userId, threadId)}`
-    : null;
+  const agent = await createLessonAgent({
+    threadId,
+    userId,
+    model,
+    sandboxPromise,
+    // Stable for the life of the thread: every publish overwrites this one key,
+    // so the teacher's link never changes.
+    publishedUrl: publicObjectUrl(publishedGameKey(userId, threadId)),
+    // Bound to this thread and user here, so the tool cannot record a version
+    // against anyone else's game — the model never supplies either id.
+    recordVersion: ({ version, label }) =>
+      recordGameVersion({ threadId, userId, version, label }),
+    trace,
+  });
 
-  const [agent, modelMessages] = await Promise.all([
-    createLessonAgent({
-      threadId,
-      userId,
-      model,
-      sandboxPromise,
-      publishedUrl,
-      trace,
-    }),
-    convertToModelMessages([message]),
-  ]);
-
+  // The UIMessage goes to Mastra AS-IS. Mastra reads a file part's `url`
+  // directly on this path; running the message through `convertToModelMessages`
+  // first (ai@7) would wrap that url in a `{ type: "url", url }` union which
+  // Mastra 1.59 does not recognise and persists as `data: ""` — the model then
+  // receives an empty file. Attachments are plain URLs the AI Gateway fetches
+  // itself (it advertises support for every URL, so nothing downloads here).
   const streamStartedAt = performance.now();
-  const stream = await agent.stream(modelMessages, {
+  const stream = await agent.stream([message], {
     modelSettings: LESSON_MODEL_SETTINGS,
     maxSteps: LESSON_MAX_STEPS,
     memory: { thread: threadId, resource: userId },

@@ -48,3 +48,5 @@ yarn-error.log*
 
 # game-engine (installed standalone inside the sandbox)
 game-engine/**/dist/
+.gstack/
+.understando-passed

@@ -8,5 +8,8 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["web_*"],
+  // Must match the prefix in src/server/db/schema.ts. Also what keeps
+  // drizzle-kit away from the mastra_* tables @mastra/pg owns on this same
+  // database: they are not modelled here, so an unfiltered push would drop them.
+  tablesFilter: ["lessonplay_*"],
 } satisfies Config;

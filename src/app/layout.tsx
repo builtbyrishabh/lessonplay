@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -12,7 +13,6 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "LessonPlay",
   description: "Give it a chemistry chapter. Get a playable lab.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export default function RootLayout({
@@ -21,6 +21,9 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
+        {/* next-themes rewrites <html>'s className, so the next/font variable
+            classes have to live here. `globals.css` applies `font-sans` to
+            `body` for the same reason. */}
         <body
           className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
         >
@@ -32,7 +35,11 @@ export default function RootLayout({
             storageKey="theme"
           >
             <TRPCReactProvider>
-              <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+              <NuqsAdapter>
+                <TooltipProvider delayDuration={300}>
+                  {children}
+                </TooltipProvider>
+              </NuqsAdapter>
             </TRPCReactProvider>
           </ThemeProvider>
         </body>

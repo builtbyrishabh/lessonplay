@@ -40,11 +40,19 @@ export interface ExperimentStepResult {
   readonly nextOperandState?: ExperimentSampleState;
 }
 
-/** True when every constraint in `when` is satisfied by the sample `state`. */
+/**
+ * True when every constraint in `when` is satisfied by the sample `state`.
+ *
+ * A missing `when` is treated as "no constraints" rather than thrown on: the
+ * type requires it, but the data is authored by a model at runtime, and the
+ * structural validator is where a missing `when` gets reported. Crashing
+ * here would turn that clear message into a stack trace from the analyzer.
+ */
 export function matchesWhen(
   state: ExperimentSampleState,
-  when: ExperimentSampleState,
+  when: ExperimentSampleState | undefined,
 ): boolean {
+  if (!when) return true;
   for (const key of Object.keys(when)) {
     if (state[key] !== when[key]) {
       return false;

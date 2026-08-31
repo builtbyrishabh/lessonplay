@@ -47,7 +47,7 @@ function parse(raw: string | null): Settings {
   }
 }
 
-/** Client-side preferences (model picker). Persisted in localStorage. */
+/** Client-side preferences (model). Persisted in localStorage. */
 export function useSettings() {
   const settings = useSyncExternalStore(
     subscribe,

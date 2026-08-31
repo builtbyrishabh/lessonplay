@@ -18,4 +18,31 @@ export {
   Trash as TrashIcon,
   Stop as StopIcon,
   Sparkles as SparklesIcon,
+  Paperclip as PaperclipIcon,
+  FileText as FileTextIcon,
+  CrossSmall as CrossSmallIcon,
+} from "geist-icons";
+
+/** Glyphs used only by the public marketing page. */
+export {
+  ArrowRight as ArrowRightIcon,
+  BookOpen as BookOpenIcon,
+  Check as CheckIcon,
+  CheckCircleFill as CheckCircleFillIcon,
+  Clock as ClockIcon,
+  Cross as CrossIcon,
+  Droplet as DropletIcon,
+  Layers as LayersIcon,
+  Lightning as LightningIcon,
+  Menu as MenuIcon,
+  Moon as MoonIcon,
+  Play as PlayIcon,
+  Prism as PrismIcon,
+  Puzzle as PuzzleIcon,
+  Share as ShareIcon,
+  ShieldCheck as ShieldCheckIcon,
+  Sun as SunIcon,
+  Target as TargetIcon,
+  Terminal as TerminalIcon,
+  Users as UsersIcon,
 } from "geist-icons";

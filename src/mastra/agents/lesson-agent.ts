@@ -61,6 +61,16 @@ export type CreateLessonAgentOptions = {
    * anything under `tools/` has to import it.
    */
   publishedUrl?: string | null;
+  /**
+   * Called when `publish` succeeds, to index the new version. Passed down from
+   * the route rather than built here for the same reason as `publishedUrl`:
+   * this factory stays free of `~/env` and `~/server/db`, so the unit tests can
+   * build a real agent with no database.
+   */
+  recordVersion?: (published: {
+    version: number;
+    label: string;
+  }) => Promise<void>;
   trace?: LessonTrace;
 };
 
@@ -100,6 +110,7 @@ export async function createLessonAgent(opts: CreateLessonAgentOptions) {
       ? createSandboxTools({
           sandboxPromise: opts.sandboxPromise,
           publishedUrl: opts.publishedUrl,
+          recordVersion: opts.recordVersion,
           trace: opts.trace,
         })
       : {},

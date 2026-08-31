@@ -81,12 +81,17 @@ treated as `classify` (back-compat), but prefer to set `kind` explicitly.
 
 ### `reach-target-state` — drive a sample to a goal state
 
-`{ kind: "reach-target-state", sampleId, target, targetLabel }`
+`{ kind: "reach-target-state", sampleId, target, numericTarget?, targetLabel }`
 
 - The learner freely applies tools to `sampleId` until its state satisfies every
   entry in `target` (e.g. `{ nature: "neutral" }`), then the level auto-wins.
   This only works if some tool carries `setState` that moves the sample toward
   the target (e.g. `add-base` flips `nature: "acid"` → `"neutral"`).
+- `numericTarget?` adds numeric conditions checked alongside `target` — both
+  must hold. `{ ph: { op: "==", value: 7 } }` or `{ ph: { min: 6, max: 8 } }`
+  for "drive the pH to neutral" with a tool whose effect carries
+  `addState: { ph: 1 }` (see `model-contract.md` → Numeric properties). A goal
+  may be purely numeric: `target: {}` with a `numericTarget`.
 - `targetLabel` is the learner-facing objective ("Bring the bottle to neutral");
   keep it free of the mechanism and of concept names.
 - The analyzer proves the target is **reachable** with the offered tools (a

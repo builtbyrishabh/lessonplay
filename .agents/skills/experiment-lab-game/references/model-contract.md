@@ -12,6 +12,7 @@ ExperimentGame
     samples: ExperimentSample[]
     tools:   ExperimentTool[]
     ruleSet: ExperimentRuleSet
+    reagents?: ExperimentReagent[]   (only for binary tools — see below)
   categories: ExperimentCategory[]
   levels:     ExperimentLevel[]
 ```
@@ -21,7 +22,10 @@ ExperimentGame
 `ExperimentSample = { id, label, properties, categoryId, revealLabel? }`
 
 - `properties` is the **hidden ground truth** the simulation reasons over
-  (e.g. `{ particleSize: "coarse" }`). Never shown to the player.
+  (e.g. `{ particleSize: "coarse" }`). Never shown to the player. A value is a
+  **string** (`"coarse"`) or a **number** (`ph: 2`, `dissolved: 0`,
+  `saturationPoint: 30`); numbers unlock threshold/range rules and
+  accumulation — see "Numeric properties" below.
 - `label` is the public, learner-facing name (`"Unknown B"`). Never the answer.
 - `categoryId` is the classification answer; it must match an `ExperimentCategory.id`.
   It is **required on every sample**, even one used only in a `predict-outcome` or
@@ -39,21 +43,36 @@ ExperimentGame
 
 ## Tools
 
-`ExperimentTool = { id, label, description? }`
+`ExperimentTool = { id, label, description?, operand? }`
 
 - A tool is an operator over sample state, not a fixed answer key.
+- `operand?` makes the tool **binary** — it acts on the chosen sample *plus* a
+  second thing: `{ kind: "sample" }` (another bench sample) or
+  `{ kind: "reagent" }` (a shelf reagent from `definition.reagents`). See
+  "Binary tools and reagents" below. Omit it for the ordinary unary tool.
 - Every tool offered in a level must have at least one rule that fires for it,
   or the validator flags it as inert.
 
 ## Rules
 
 `ExperimentRuleSet = { rules: ExperimentRule[], defaultEffect: ExperimentEffect }`
-`ExperimentRule = { toolId, when, effect }`
+`ExperimentRule = { toolId, when, numericWhen?, whenOperand?, numericWhenOperand?, effect }`
 
 - Rules are **first-match-wins**: order specific `when` constraints before
   general ones.
-- `when` is a set of property constraints; **all** must match the sample's
-  current state for the rule to fire.
+- `when` is **required on every rule**: a set of string-equality property
+  constraints that must **all** match the sample's current state for the rule
+  to fire. A rule that fires on any state (e.g. one gated only by
+  `numericWhen`) still needs `when: {}` — a rule with no `when` fails
+  validation.
+- `numericWhen?` adds numeric constraints on the same sample, evaluated in
+  addition to `when` — every entry must hold. Each value is either a
+  **threshold** `{ op: ">=" | "<=" | ">" | "<" | "==", value: 7 }` (or
+  `{ op, property: "saturationPoint" }` to compare against another property of
+  the *same* sample) or a **range** `{ min?, max? }` (inclusive). Comparing a
+  property the sample lacks, or a non-number, simply fails to match.
+- `whenOperand?` / `numericWhenOperand?` are the same two constraint sets applied
+  to the **second operand** of a binary tool (see below). Ignored on unary tools.
 - `defaultEffect` fires for any tool/state combination no rule covers, keeping
   the world consistent (typically a neutral "nothing observable happens").
 - Use `effect.setState` to make a cause persist so later causes can depend on it
@@ -62,7 +81,7 @@ ExperimentGame
 
 ## Effects and visuals
 
-`ExperimentEffect = { observationId, observation, visual, gasLabel?, readout?, setState? }`
+`ExperimentEffect = { observationId, observation, visual, gasLabel?, readout?, setState?, addState?, setOperandState?, addOperandState? }`
 
 - `observationId` is a stable handle; the same id must always carry the same
   `observation` text (the validator enforces this).
@@ -71,17 +90,20 @@ ExperimentGame
 - `visual` must be one of `EXPERIMENT_VISUALS`:
   `"beam" | "settle" | "residue" | "fizz" | "color-change" | "gas" |
   "precipitate" | "conductivity" | "temperature" | "ph-scale" | "odour" |
-  "none"`. All are animated by the `Beaker`.
+  "measure" | "none"`. All are animated by the `Beaker`; `measure` shows a
+  balance / graduated scale surfacing a number, and pairs with a `measure`
+  readout.
 - `gasLabel?` is a short gas token shown as a chip on the escaping bubbles, e.g.
   `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"` (the validator
   rejects it on any other visual); when the chip names the gas, keep
   `observation` sensory and neutral instead of repeating the gas identity.
-- `readout?` is a structured reading `{ kind, value }` — the *specific* clue a
-  learner records. `kind` is one of `EXPERIMENT_READOUT_KINDS`
-  (`"color" | "ph-scale" | "conductivity" | "temperature" | "odour"`) and
-  `value` is the datum (`"red"`, `"2"`, `"on"`, `"hot"`, `"pungent"`). Use it
-  whenever the evidence is the reading itself rather than merely that something
-  changed.
+- `readout?` is a structured reading `{ kind, value, unit? }` — the *specific*
+  clue a learner records. `kind` is one of `EXPERIMENT_READOUT_KINDS`
+  (`"color" | "ph-scale" | "conductivity" | "temperature" | "odour" | "measure"`)
+  and `value` is the datum as a string (`"red"`, `"2"`, `"on"`, `"hot"`,
+  `"pungent"`, `"80"`). `unit?` (`"g"`, `"mL"`) is shown after a `measure`
+  value and is cosmetic. Use a readout whenever the evidence is the reading
+  itself rather than merely that something changed.
 - **Distinguishability is measured on the visible evidence token** — `visual`
   plus any `readout` `value` and `gasLabel` — not on `observationId` or text. So
   two samples can share a `visual` (both `color-change`) and still be
@@ -117,6 +139,78 @@ animated visuals are built around:
 
 Any tool id outside this list still works; it just renders the generic 🔬 icon.
 
+### State changes
+
+- `setState?` **replaces** the named properties on the sample after the effect
+  (absolute set), so later causes can depend on earlier ones: a suspension
+  becomes `{ settled: "yes" }` after standing; `add-base` flips
+  `nature: "acid"` → `"neutral"`.
+- `addState?` **adds** a numeric delta to each named property, applied after
+  `setState` (a missing base counts as 0): `{ dissolved: 10 }` per spoon of
+  solute, `{ ph: 1 }` per drop of base. This is how an amount grows across
+  probes until a `numericWhen` threshold rule takes over.
+- `setOperandState?` / `addOperandState?` do the same to the second operand of a
+  binary tool.
+
+## Numeric properties
+
+Give a property a number when the *amount* is the lesson — saturation, pH,
+mass, volume. The pattern is: a numeric starting value in `properties`, a tool
+whose effect carries `addState`, and a `numericWhen` rule ordered **before** the
+general one so it wins once the threshold is crossed:
+
+```ts
+samples: [{ id: "a", label: "Beaker A", properties: { dissolved: 0, saturationPoint: 30 }, categoryId: "..." }],
+tools: [{ id: "add-salt", label: "Add a spoon of salt" }],
+ruleSet: {
+  rules: [
+    // Past the sample's own hidden capacity: the spoon no longer dissolves.
+    { toolId: "add-salt", when: {}, numericWhen: { dissolved: { op: ">=", property: "saturationPoint" } },
+      effect: { observationId: "salt-settles", observation: "Grains sink and stay on the bottom.", visual: "settle" } },
+    // Otherwise it dissolves, and the amount climbs.
+    { toolId: "add-salt", when: {},
+      effect: { observationId: "salt-dissolves", observation: "The grains vanish as you stir.", visual: "none", addState: { dissolved: 10 } } },
+  ],
+  defaultEffect: { observationId: "nothing", observation: "Nothing you can see changes.", visual: "none" },
+},
+```
+
+Ranges express bands: `numericWhen: { ph: { min: 6, max: 8 } }` for "near
+neutral". A `reach-target-state` goal can require a number too via
+`numericTarget` (see `gameplay-contract.md`).
+
+## Binary tools and reagents
+
+A **binary** tool combines the chosen sample with a second operand, so one tool
+yields different outcomes depending on *what it meets* — iron in copper
+sulfate vs iron in water, acid on a metal vs acid on a carbonate.
+
+- Declare it with `operand: { kind: "sample" }` (the learner picks another bench
+  sample) or `operand: { kind: "reagent" }` (the learner picks from the shelf).
+- `ExperimentReagent = { id, label, properties }` lives in
+  `definition.reagents`. It carries hidden `properties` like a sample but is
+  never classified, so it has no `categoryId`.
+- Rules for a binary tool constrain the operand with `whenOperand` /
+  `numericWhenOperand`; `when` / `numericWhen` still describe the primary sample.
+- A `predict-outcome` prompt for a binary tool names the partner with
+  `operandId` (a sample id or reagent id).
+
+```ts
+tools: [{ id: "dip-metal", label: "Dip a metal strip", operand: { kind: "reagent" } }],
+reagents: [
+  { id: "copper-sulfate", label: "Copper sulfate solution", properties: { ion: "copper" } },
+  { id: "water", label: "Water", properties: { ion: "none" } },
+],
+rules: [
+  { toolId: "dip-metal", when: { metal: "iron" }, whenOperand: { ion: "copper" },
+    effect: { observationId: "brown-coat", observation: "A reddish-brown layer forms on the strip.", visual: "color-change", readout: { kind: "color", value: "reddish-brown" } } },
+],
+```
+
+Use a binary tool only when the pairing *is* the concept (displacement,
+neutralisation); a unary tool with rules over hidden properties covers most
+identification activities.
+
 ## Categories
 
 `ExperimentCategory = { id, label, definition? }`
@@ -141,8 +235,9 @@ scaffolding, predictionRequired, hints }`
     categories (default; `kind` may be omitted).
   - `{ kind: "predict-outcome", prompts: [{ sampleId, toolId }] }` — predict each
     tool's visible `visual` before it runs; graded on correctness.
-  - `{ kind: "reach-target-state", sampleId, target, targetLabel }` — drive one
-    sample's state to satisfy `target` (needs a `setState` tool that reaches it).
+  - `{ kind: "reach-target-state", sampleId, target, numericTarget?, targetLabel }`
+    — drive one sample's state to satisfy `target` (and any `numericTarget`
+    thresholds/ranges); needs a `setState` / `addState` tool that reaches it.
 - Narrow a goal with the exported guards `isClassifyGoal` /
   `isPredictOutcomeGoal` / `isReachTargetStateGoal`, or read `experimentGoalKind`.
 

@@ -80,6 +80,17 @@ Rules:
 - Pass tokens by name only. Do not invent palette/accent/intensity values.
 - Theming is optional. A game with no `theme` prop still renders a finished skin.
 
+## Starting Point
+
+The project you edit is already this template (`chemistry-lab-bench`): it
+builds, tests and validates as-is, with a placeholder Indicator mission in
+`src/content/missions.ts` exported as `chemistryLabTemplate` and a thin
+`src/ui/App.tsx`. A ChemQuest game **replaces the data** in
+`src/content/missions.ts` (rename the export if you like) and touches nothing
+else — except `package.json`'s `lessonplay.export` if the export name changed,
+and `tests/missions.test.ts`, which must import what you now export. Do not
+list or read the project to learn its layout; it is the shape below.
+
 ## File Shape
 
 Prefer:
