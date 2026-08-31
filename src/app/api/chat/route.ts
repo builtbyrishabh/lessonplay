@@ -6,10 +6,8 @@ import {
   type UIMessage,
 } from "ai";
 
-import { publishedGameKey } from "~/lib/sandbox-paths";
 import { isValidThreadId } from "~/lib/thread-id";
 import { recordGameVersion } from "~/server/db/games";
-import { publicObjectUrl } from "~/server/r2";
 import { prepareLessonSandbox } from "~/server/sandbox/prepare";
 import { createLessonAgent } from "~/mastra/agents/lesson-agent";
 import {
@@ -82,9 +80,13 @@ export async function POST(req: Request) {
     userId,
     model,
     sandboxPromise,
-    // Stable for the life of the thread: every publish overwrites this one key,
-    // so the teacher's link never changes.
-    publishedUrl: publicObjectUrl(publishedGameKey(userId, threadId)),
+    // Stable for the life of the thread: /play proxies current/index.html,
+    // the one key every publish overwrites, so the teacher's link never
+    // changes. The app route rather than the bucket URL on purpose — the raw
+    // key embeds the Clerk user id, and this URL is what the model pastes
+    // into chat. Origin comes from the request so dev and preview deploys
+    // hand out links on their own host.
+    publishedUrl: new URL(`/play/${threadId}`, req.url).toString(),
     // Bound to this thread and user here, so the tool cannot record a version
     // against anyone else's game — the model never supplies either id.
     recordVersion: ({ version, label }) =>

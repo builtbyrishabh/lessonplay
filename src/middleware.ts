@@ -12,6 +12,9 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/privacy",
   "/terms",
+  // The share link. Students opening a teacher's game hold no session, and the
+  // route serves nothing but the published build — see app/play/[threadId].
+  "/play(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/robots.txt",

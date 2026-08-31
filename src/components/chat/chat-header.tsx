@@ -9,9 +9,11 @@ import { api } from "~/trpc/react";
 /**
  * Thread title, plus the teacher's share link once a game exists.
  *
- * The link is `current/index.html` — the one key every publish overwrites — so
- * it keeps working as the game is revised and can be handed to a class once.
- * The preview pane deliberately uses the versioned URL instead; see
+ * The link is `/play/<threadId>` — the app route that proxies
+ * `current/index.html`, the one key every publish overwrites — so it keeps
+ * working as the game is revised, can be handed to a class once, and never
+ * exposes the bucket path (which embeds the owner's Clerk user id). The
+ * preview pane deliberately uses the versioned bucket URL instead; see
  * `GamePreview`.
  */
 export function ChatHeader({
@@ -23,12 +25,16 @@ export function ChatHeader({
 }) {
   const latest = api.games.latest.useQuery({ threadId });
   const [copied, setCopied] = useState(false);
-  const shareUrl = latest.data?.shareUrl ?? null;
+  const sharePath = latest.data?.sharePath ?? null;
 
   const copy = async () => {
-    if (!shareUrl) return;
+    if (!sharePath) return;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      // Absolute at copy time — the clipboard leaves this origin, the href
+      // below doesn't have to.
+      await navigator.clipboard.writeText(
+        new URL(sharePath, window.location.origin).toString(),
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -45,7 +51,7 @@ export function ChatHeader({
           {title}
         </span>
       </div>
-      {shareUrl ? (
+      {sharePath ? (
         <div className="flex shrink-0 items-center gap-1 px-3">
           <span className="text-muted-foreground hidden text-[11px] lg:inline">
             v{latest.data?.version}
@@ -54,7 +60,7 @@ export function ChatHeader({
             {copied ? "Copied" : "Copy link"}
           </Button>
           <Button asChild size="sm" variant="ghost">
-            <a href={shareUrl} rel="noopener noreferrer" target="_blank">
+            <a href={sharePath} rel="noopener noreferrer" target="_blank">
               Open
             </a>
           </Button>

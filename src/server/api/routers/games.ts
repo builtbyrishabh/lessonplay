@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { publishedGameKey } from "~/lib/sandbox-paths";
 import { isValidThreadId } from "~/lib/thread-id";
 import { latestGameVersion, listGameVersions } from "~/server/db/games";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -31,9 +30,14 @@ export const gamesRouter = createTRPCRouter({
         // The VERSIONED key, not current/index.html. Two reasons: this URL is
         // immutable, so the CDN can cache it forever and no cache-buster is
         // needed; and the pane can show any version, not only the newest.
-        // current/ stays the stable link a teacher shares — see `shareUrl`.
+        // current/ stays the stable target a teacher shares — see `sharePath`.
         url: publicObjectUrl(row.htmlKey),
-        shareUrl: publicObjectUrl(publishedGameKey(ctx.userId, input.threadId)),
+        // A same-origin path, NOT the bucket URL: the raw key embeds the
+        // Clerk user id, and a share link travels to whole classrooms. The
+        // /play route proxies current/index.html and keeps the id server-side.
+        // A path (not an absolute URL) so localhost and preview deploys hand
+        // out links on their own origin.
+        sharePath: `/play/${input.threadId}`,
       };
     }),
 
