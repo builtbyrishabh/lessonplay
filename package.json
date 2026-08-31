@@ -2,6 +2,29 @@
   "name": "lessonplay",
   "version": "0.1.0",
   "private": true,
+  "description": "Give it a chemistry chapter. Get a playable lab. An AI studio that writes, validates, and publishes chemistry learning games.",
+  "license": "Apache-2.0",
+  "author": "Rishabh Singh",
+  "homepage": "https://github.com/builtbyrishabh/lessonplay-mastra#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/builtbyrishabh/lessonplay-mastra.git"
+  },
+  "bugs": {
+    "url": "https://github.com/builtbyrishabh/lessonplay-mastra/issues"
+  },
+  "keywords": [
+    "education",
+    "chemistry",
+    "learning-games",
+    "ai-agent",
+    "mastra",
+    "nextjs"
+  ],
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=10"
+  },
   "type": "module",
   "scripts": {
     "build": "next build",
@@ -76,9 +99,6 @@
     "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2",
     "vitest": "^4.1.10"
-  },
-  "ct3aMetadata": {
-    "initVersion": "7.40.0"
   },
   "packageManager": "pnpm@10.20.0",
   "pnpm": {

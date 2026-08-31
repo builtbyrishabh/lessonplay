@@ -1,0 +1,76 @@
+name: Bug report
+description: Something behaves differently than it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a **security** issue, please use
+        [private reporting](https://github.com/builtbyrishabh/lessonplay-mastra/security/advisories/new)
+        instead.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system?
+      options:
+        - Studio UI (chat, preview, code pane)
+        - Agent behaviour (bad game, wrong tool use, loops)
+        - Sandbox (Daytona, build, install)
+        - Validation gate / validator
+        - Publish & sharing (R2, versions, links)
+        - Game engine (@learn-loop/core)
+        - Marketing homepage
+        - Setup / local development
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Prompt the agent with "…"
+        2. Wait for the build
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: The prompt or chapter text
+      description: >
+        For agent bugs this matters more than anything else — the same prompt
+        usually reproduces the same failure. Redact anything private.
+      render: text
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      placeholder: "git rev-parse --short HEAD"
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `pnpm typecheck` and `pnpm test` and the failure isn't a local setup problem
+        - label: I searched existing issues

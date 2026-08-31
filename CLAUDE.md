@@ -1,6 +1,6 @@
 # LessonPlay — chemistry learning-game studio
 
-T3 stack at the repo root: Next.js App Router + tRPC + Drizzle (Postgres) + Clerk + Tailwind.
+Next.js App Router + tRPC + Drizzle (Postgres) + Clerk + Tailwind, at the repo root.
 
 - Auth: Clerk. `src/middleware.ts` protects everything except `/sign-in`, `/sign-up`.
   tRPC context exposes `userId`; use `protectedProcedure` for user-scoped work.
@@ -78,8 +78,9 @@ to guaranteed-invalid and everything falls back to Times New Roman.
   is the adaptive text/icon accent, `--lp-brand`/`--lp-on-brand` the filled-surface pair
   that must hold contrast in BOTH themes.
 - `components/layout/` app-shell, sidebar (tRPC `chats.list`), chat-item (rename/delete)
-- `components/home/home-client.tsx` — landing prompt; creates a thread, hands the first
-  prompt off via sessionStorage (`lib/pending-prompt.ts`), navigates to `/chats/[id]`
+- `(app)/chats/page.tsx` — the SPA harness: home prompt and conversation in one page,
+  the active thread in `?id=`; the first prompt is handed to the conversation as a
+  `ChatSeed` (`lib/chat-seed.ts`) so it dispatches with nothing on the critical path
 - `components/chat/` chat-provider (owns `useChat` for BOTH panes), chat-workspace
   (v0 split layout), chat-header (share link), chat-conversation, message-parts,
   tool-call (renders every `tool-*` part), workspace-pane (Preview | Code),
@@ -94,7 +95,7 @@ to guaranteed-invalid and everything falls back to Times New Roman.
   count when done — no per-file rows; consecutive `read`s fold into a `ReadGroup`.
   `step-start` parts are transparent to that grouping (`lib/message-groups.ts`).
 Client sends only the newest user message (`prepareSendMessagesRequest`); Memory holds history.
-Model choice lives in localStorage (`lib/hooks/use-settings.ts`) and is sent in the body.
+The model is locked to one id in `lesson-shared.ts`; the route still resolves any `model` in the request body via `resolveLessonModel`, so re-enabling choice is additive.
 
 Checks: `pnpm typecheck`; `pnpm test` (factory tests, in-memory);
 `pnpm sandbox:smoke` (live Daytona + R2: mount → publish → hydrate);
