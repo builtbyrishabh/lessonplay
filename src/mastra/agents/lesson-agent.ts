@@ -56,6 +56,12 @@ export type CreateLessonAgentOptions = {
    */
   sandboxPromise?: Promise<Sandbox>;
   /**
+   * Re-runs `prepareLessonSandbox` when the sandbox container dies mid-
+   * request (auto-stop/archive racing a tool call). Optional, like the
+   * sandbox itself.
+   */
+  recoverSandbox?: () => Promise<Sandbox>;
+  /**
    * Public URL this thread's published game will live at. Resolved by the
    * route because it needs `~/env`; passed down so neither this factory nor
    * anything under `tools/` has to import it.
@@ -109,6 +115,7 @@ export async function createLessonAgent(opts: CreateLessonAgentOptions) {
     tools: opts.sandboxPromise
       ? createSandboxTools({
           sandboxPromise: opts.sandboxPromise,
+          recoverSandbox: opts.recoverSandbox,
           publishedUrl: opts.publishedUrl,
           recordVersion: opts.recordVersion,
           trace: opts.trace,

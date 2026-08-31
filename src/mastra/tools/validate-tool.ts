@@ -5,6 +5,7 @@ import { z } from "zod";
 import { GAME_ROOT } from "~/lib/sandbox-paths";
 import type { LessonTrace } from "~/mastra/agents/lesson-shared";
 import { runCommand } from "~/server/sandbox/exec";
+import { withRecoveredSandbox } from "~/server/sandbox/lifecycle";
 import { validateScript } from "~/server/sandbox/scripts";
 
 /** Pure functions over the authored data — fast, unlike the test+build gate. */
@@ -15,6 +16,8 @@ const EXIT_GAME_NOT_FOUND = 2;
 
 export type CreateValidateToolOptions = {
   sandboxPromise: Promise<Sandbox>;
+  /** Re-runs the full sandbox preparation if the container died. See lifecycle.ts. */
+  recoverSandbox?: () => Promise<Sandbox>;
   trace?: LessonTrace;
 };
 
@@ -44,6 +47,7 @@ const levelReport = z.object({
  */
 export function createValidateTool({
   sandboxPromise,
+  recoverSandbox,
   trace,
 }: CreateValidateToolOptions) {
   return createTool({
@@ -80,67 +84,70 @@ export function createValidateTool({
         message,
       });
 
-      let sandbox: Sandbox;
       try {
-        sandbox = await sandboxPromise;
+        return await withRecoveredSandbox(
+          sandboxPromise,
+          recoverSandbox,
+          async (sandbox) => {
+          const res = await runCommand(sandbox, validateScript(), {
+            cwd: GAME_ROOT,
+            timeoutSeconds: VALIDATE_TIMEOUT_SECONDS,
+          });
+          const durationMs = Math.round(performance.now() - startedAt);
+
+          const parsed = parseReport(res.stdout);
+          if (!parsed) {
+            log("tool.validate.unparseable", {
+              exitCode: res.exitCode,
+              durationMs,
+            });
+            return fail(
+              `The validator did not return a readable report (exit ${res.exitCode}):\n${res.stdout.slice(-2000)}`,
+            );
+          }
+
+          if (res.exitCode === EXIT_GAME_NOT_FOUND) {
+            log("tool.validate.not_found", { durationMs });
+            return fail(
+              [
+                `The validator could not find the game: ${parsed.error ?? "unknown reason"}`,
+                parsed.hint,
+                "Nothing was checked, so do not treat this as a pass.",
+              ]
+                .filter(Boolean)
+                .join(" "),
+            );
+          }
+
+          const levels = parsed.items?.flatMap((item) => item.levels ?? []);
+          const errors = parsed.errors ?? [];
+
+          if (res.exitCode === EXIT_GAME_HAS_ERRORS || parsed.ok === false) {
+            log("tool.validate.failed", { errorCount: errors.length, durationMs });
+            return {
+              ok: false,
+              errors,
+              levels,
+              message: `The game is not ready: ${errors.length} problem(s) found. Fix these and run validate again.`,
+            };
+          }
+
+          log("tool.validate.ok", { durationMs });
+          return {
+            ok: true,
+            errors: [],
+            levels,
+            message:
+              "The game is coherent, winnable by reasoning, and plays through to a win. Safe to publish.",
+          };
+          },
+        );
       } catch (err) {
         log("tool.validate.sandbox_unavailable");
         return fail(
           `Sandbox unavailable: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
-
-      const res = await runCommand(sandbox, validateScript(), {
-        cwd: GAME_ROOT,
-        timeoutSeconds: VALIDATE_TIMEOUT_SECONDS,
-      });
-      const durationMs = Math.round(performance.now() - startedAt);
-
-      const parsed = parseReport(res.stdout);
-      if (!parsed) {
-        log("tool.validate.unparseable", {
-          exitCode: res.exitCode,
-          durationMs,
-        });
-        return fail(
-          `The validator did not return a readable report (exit ${res.exitCode}):\n${res.stdout.slice(-2000)}`,
-        );
-      }
-
-      if (res.exitCode === EXIT_GAME_NOT_FOUND) {
-        log("tool.validate.not_found", { durationMs });
-        return fail(
-          [
-            `The validator could not find the game: ${parsed.error ?? "unknown reason"}`,
-            parsed.hint,
-            "Nothing was checked, so do not treat this as a pass.",
-          ]
-            .filter(Boolean)
-            .join(" "),
-        );
-      }
-
-      const levels = parsed.items?.flatMap((item) => item.levels ?? []);
-      const errors = parsed.errors ?? [];
-
-      if (res.exitCode === EXIT_GAME_HAS_ERRORS || parsed.ok === false) {
-        log("tool.validate.failed", { errorCount: errors.length, durationMs });
-        return {
-          ok: false,
-          errors,
-          levels,
-          message: `The game is not ready: ${errors.length} problem(s) found. Fix these and run validate again.`,
-        };
-      }
-
-      log("tool.validate.ok", { durationMs });
-      return {
-        ok: true,
-        errors: [],
-        levels,
-        message:
-          "The game is coherent, winnable by reasoning, and plays through to a win. Safe to publish.",
-      };
     },
   });
 }

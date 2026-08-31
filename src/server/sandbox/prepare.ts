@@ -72,12 +72,13 @@ export function prepareLessonSandbox(opts: {
   const log = opts.trace?.log ?? (() => {});
 
   const promise = (async () => {
-    const { sandbox, status } = await getOrCreateSandbox(
+    const { sandbox, status, initialState } = await getOrCreateSandbox(
       sandboxIdForThread(opts.threadId),
       { env: SANDBOX_ENV },
     );
     log("sandbox.acquired", {
       status,
+      state: initialState ?? "new",
       id: sandbox.id,
       durationMs: Math.round(performance.now() - startedAt),
     });

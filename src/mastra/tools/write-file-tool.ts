@@ -5,6 +5,7 @@ import { z } from "zod";
 import { expandSandboxPath, GAME_ROOT } from "~/lib/sandbox-paths";
 import type { LessonTrace } from "~/mastra/agents/lesson-shared";
 import { quoteShellArg, runCommand } from "~/server/sandbox/exec";
+import { withRecoveredSandbox } from "~/server/sandbox/lifecycle";
 
 function parentDir(path: string): string {
   const i = path.lastIndexOf("/");
@@ -13,6 +14,8 @@ function parentDir(path: string): string {
 
 export type CreateWriteFileToolOptions = {
   sandboxPromise: Promise<Sandbox>;
+  /** Re-runs the full sandbox preparation if the container died. See lifecycle.ts. */
+  recoverSandbox?: () => Promise<Sandbox>;
   trace?: LessonTrace;
 };
 
@@ -26,6 +29,7 @@ export type CreateWriteFileToolOptions = {
  */
 export function createWriteFileTool({
   sandboxPromise,
+  recoverSandbox,
   trace,
 }: CreateWriteFileToolOptions) {
   return createTool({
@@ -44,26 +48,30 @@ export function createWriteFileTool({
     execute: async ({ path: input, content }) => {
       const path = expandSandboxPath(input);
       try {
-        const sandbox = await sandboxPromise;
+        return await withRecoveredSandbox(
+          sandboxPromise,
+          recoverSandbox,
+          async (sandbox) => {
+            const dir = parentDir(path);
+            const mkdir = await runCommand(
+              sandbox,
+              `mkdir -p ${quoteShellArg(dir)}`,
+            );
+            if (!mkdir.success) {
+              return {
+                ok: false,
+                path,
+                error: `Could not create parent directory "${dir}" (exit ${mkdir.exitCode}): ${mkdir.stdout.trim() || "no output"}. Check the path is valid and writable.`,
+              };
+            }
 
-        const dir = parentDir(path);
-        const mkdir = await runCommand(
-          sandbox,
-          `mkdir -p ${quoteShellArg(dir)}`,
+            const buffer = Buffer.from(content, "utf-8");
+            await sandbox.fs.uploadFile(buffer, path);
+            trace?.log("tool.write", { path, bytes: buffer.byteLength });
+
+            return { ok: true, path, bytesWritten: buffer.byteLength };
+          },
         );
-        if (!mkdir.success) {
-          return {
-            ok: false,
-            path,
-            error: `Could not create parent directory "${dir}" (exit ${mkdir.exitCode}): ${mkdir.stdout.trim() || "no output"}. Check the path is valid and writable.`,
-          };
-        }
-
-        const buffer = Buffer.from(content, "utf-8");
-        await sandbox.fs.uploadFile(buffer, path);
-        trace?.log("tool.write", { path, bytes: buffer.byteLength });
-
-        return { ok: true, path, bytesWritten: buffer.byteLength };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         trace?.log("tool.write.error", { path, error: message });
