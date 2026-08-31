@@ -10,9 +10,10 @@
  * fall back to the default rather than erroring.
  *
  * Currently OpenAI GPT 5.6 Luna only, and the composer no longer offers a
- * picker. Re-enabling choice means adding entries here AND restoring the
- * dropdown in `prompt-box.tsx`; the request-body plumbing (`use-settings` →
- * `chat-provider` → `resolveLessonModel` in the chat route) is still intact.
+ * picker. Re-enabling choice means adding entries here, restoring a dropdown
+ * in `prompt-box.tsx`, and sending the choice as `model` in the chat request
+ * body — the route still runs `resolveLessonModel(body.model)`, so the server
+ * side needs no change.
  */
 export const LESSON_MODELS = [
   {

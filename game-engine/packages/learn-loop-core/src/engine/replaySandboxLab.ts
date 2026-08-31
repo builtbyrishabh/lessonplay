@@ -2,7 +2,6 @@ import type {
   SandboxLabConclusion,
   SandboxLabMission,
 } from "../model/sandboxLab";
-import type { ValidationResult } from "../model/scenario";
 import {
   createSandboxLabSession,
   getVisibleMaterials,
@@ -173,12 +172,4 @@ export function replaySandboxLabMission(
 function describeMissing(missing: readonly string[]): string {
   if (missing.length === 0) return "no evidence outstanding";
   return `evidence still uncollected: ${missing.map((id) => `"${id}"`).join(", ")}`;
-}
-
-/** {@link replaySandboxLabMission} folded into the shared validation shape. */
-export function replaySandboxLabMissionResult(
-  mission: SandboxLabMission,
-): ValidationResult {
-  const { ok, errors } = replaySandboxLabMission(mission);
-  return { ok, errors };
 }

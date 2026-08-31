@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 
 import { GAME_ROOT, SANDBOX_HOME } from "./sandbox-paths";
+import { stringField, type ToolPartLike } from "./tool-parts";
 
 /**
  * The code pane's state, derived entirely from the message stream.
@@ -74,24 +75,6 @@ export function languageFor(path: string): string {
   return map[ext] ?? "text";
 }
 
-type ToolPart = {
-  type: string;
-  state?: string;
-  input?: unknown;
-};
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function stringField(input: unknown, key: string): string | undefined {
-  const record = asRecord(input);
-  const value = record?.[key];
-  return typeof value === "string" ? value : undefined;
-}
-
 /**
  * Fold every `write` and `edit` tool call in the conversation into a file list.
  *
@@ -105,7 +88,7 @@ export function deriveGameFiles(messages: UIMessage[]): GameFilesState {
 
   for (const message of messages) {
     for (const rawPart of message.parts) {
-      const part = rawPart as ToolPart;
+      const part = rawPart as ToolPartLike;
       if (part.type !== "tool-write" && part.type !== "tool-edit") continue;
 
       const rawPath = stringField(part.input, "path");

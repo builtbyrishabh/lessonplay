@@ -1,9 +1,9 @@
 /**
  * `@learn-loop/core` — the headless guided-sim engine.
  *
- * This barrel is React-free: model value types, the rule engine, the scenario
- * validator, the session reducer, the tap-gate, and the stage geometry. A game
- * imports these to run the Predict → Observe → Explain loop without pulling in
+ * This barrel is React-free: model value types, the rule engines, the
+ * validators, and the session reducers. A game imports these to run the
+ * Predict → Observe → Explain loop without pulling in
  * any UI. The optional React shells live behind the separate `@learn-loop/core/ui`
  * entry so headless consumers never depend on React.
  */
@@ -48,9 +48,6 @@ export type {
 export { IMPLEMENTED_TRANSFORMS } from "./model/scenario";
 export type {
   GuidedLabEffectTag,
-  GuidedLabGame,
-  GuidedLabMission,
-  GuidedLabMissionPresentation,
   StationVisual,
   StationVisualKind,
 } from "./model/guidedLabPresentation";
@@ -59,7 +56,6 @@ export {
   GUIDED_LAB_APPARATUS_LABELS,
   GUIDED_LAB_REACTION_LABELS,
   STATION_VISUAL_KINDS,
-  validateGuidedLabPresentation,
 } from "./model/guidedLabPresentation";
 export type {
   SandboxLabConclusion,
@@ -126,15 +122,6 @@ export {
 export { applyAction, type ApplyResult } from "./engine/applyAction";
 export { validateScenario } from "./engine/validateScenario";
 export {
-  createSession,
-  reduce,
-  currentStep,
-  isStepResolved,
-  type Phase,
-  type SessionState,
-  type SessionEvent,
-} from "./engine/session";
-export {
   createSandboxLabSession,
   reduceSandboxLabSession,
   hasRequiredEvidence,
@@ -146,19 +133,12 @@ export {
   type SandboxLabSessionState,
 } from "./engine/sandboxLabSession";
 export {
-  gateTap,
-  hintTargetFor,
-  type TapOutcome,
-  type ToolHint,
-} from "./engine/tapGate";
-export {
   solveSandboxLabMission,
   type SandboxLabSolveResult,
 } from "./engine/solveSandboxLabMission";
 export { validateSandboxLabMission } from "./engine/validateSandboxLabMission";
 export {
   replaySandboxLabMission,
-  replaySandboxLabMissionResult,
   type SandboxLabReplayResult,
 } from "./engine/replaySandboxLab";
 export {
@@ -193,7 +173,6 @@ export {
 } from "./engine/validateExperimentGame";
 export {
   replayExperimentGame,
-  replayExperimentGameResult,
   type ExperimentReplayResult,
 } from "./engine/replayExperiment";
 export {
@@ -208,11 +187,3 @@ export {
   type ExperimentSessionState,
   type ExperimentSessionEvent,
 } from "./engine/experimentSession";
-
-// Stage geometry
-export {
-  computeStationLayout,
-  type Rect,
-  type StationBox,
-  type StageLayout,
-} from "./stage/layout";

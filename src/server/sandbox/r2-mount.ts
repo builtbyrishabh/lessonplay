@@ -2,7 +2,7 @@ import type { Sandbox } from "@daytonaio/sdk";
 
 import { env } from "~/env";
 import { gameBucketPrefix, R2_ROOT } from "~/lib/sandbox-paths";
-import { runCommand } from "./daytona";
+import { runCommand } from "./exec";
 
 const LOG_PATH = "/tmp/s3fs-game.log";
 

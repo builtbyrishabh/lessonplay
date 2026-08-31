@@ -10,6 +10,11 @@ import {
 } from "~/components/ui/collapsible";
 import { displayPath } from "~/lib/game-files";
 import {
+  failureOf,
+  stringField,
+  type ToolPartLike,
+} from "~/lib/tool-parts";
+import {
   ChevronDownIcon,
   ChevronRightIcon,
   CodeIcon,
@@ -29,14 +34,6 @@ import { cn } from "~/lib/utils";
  * the row never shows a bare "calling a tool…".
  */
 
-type ToolPartLike = {
-  type: string;
-  state?: string;
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-};
-
 const TOOL_LABELS: Record<string, string> = {
   bash: "Running",
   read: "Reading",
@@ -46,23 +43,17 @@ const TOOL_LABELS: Record<string, string> = {
   publish: "Publishing",
 };
 
-function field(input: unknown, key: string): string | undefined {
-  if (typeof input !== "object" || input === null) return undefined;
-  const value = (input as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : undefined;
-}
-
 function toolNameOf(type: string): string {
   return type.startsWith("tool-") ? type.slice("tool-".length) : type;
 }
 
 /** The one line that describes what this call is doing. */
 function headline(name: string, input: unknown): string {
-  const intent = field(input, "intent");
+  const intent = stringField(input, "intent");
   if (intent) return intent;
-  const path = field(input, "path");
+  const path = stringField(input, "path");
   if (path) return displayPath(path);
-  const command = field(input, "command");
+  const command = stringField(input, "command");
   if (command) return command;
   return TOOL_LABELS[name] ?? name;
 }
@@ -138,15 +129,8 @@ export function ReadGroup({ parts }: { parts: ToolPartLike[] }) {
     (p) => p.state === "input-streaming" || p.state === "input-available",
   );
   const rows = parts.map((p) => {
-    const path = field(p.input, "path");
-    const error =
-      p.errorText ??
-      (typeof p.output === "object" &&
-      p.output !== null &&
-      (p.output as Record<string, unknown>).ok === false
-        ? String((p.output as Record<string, unknown>).error ?? "failed")
-        : null);
-    return { path: path ? displayPath(path) : "…", error };
+    const path = stringField(p.input, "path");
+    return { path: path ? displayPath(path) : "…", error: failureOf(p) };
   });
   const failures = rows.filter((r) => r.error).length;
   const count = rows.length;
@@ -212,11 +196,7 @@ export function ToolCall({ part }: { part: ToolPartLike }) {
   const name = toolNameOf(part.type);
   const running =
     part.state === "input-streaming" || part.state === "input-available";
-  const failed =
-    part.state === "output-error" ||
-    (typeof part.output === "object" &&
-      part.output !== null &&
-      (part.output as Record<string, unknown>).ok === false);
+  const failed = failureOf(part) !== null;
 
   const title = headline(name, part.input);
   const summary = running ? null : resultSummary(name, part.output);
