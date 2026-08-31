@@ -6,8 +6,10 @@
 
 **Give it a chemistry chapter. Get a playable lab.**
 
-An open-source studio where an AI agent turns a textbook section into a real, playable
-simulation — and proves it's winnable before anyone can share it.
+An open-source studio where an AI agent turns a chemistry chapter into a real, playable
+simulation — and proves it's winnable before anyone plays it.
+
+Built for school chemistry, classes 8–10.
 
 <p>
   <a href="https://www.lessonplay.space"><img alt="Try it live at lessonplay.space" src="https://img.shields.io/badge/Try_it_live-lessonplay.space-7543DD?style=for-the-badge&logoColor=white"></a>
@@ -32,13 +34,17 @@ simulation — and proves it's winnable before anyone can share it.
 
 ## What it is
 
-Teachers describe a lesson in one sentence — or paste the chapter straight in.
-LessonPlay's agent designs the game, writes the code in a sandbox, plays it to a
-win to prove it works, and hands back one link to share with the class.
+Describe a lesson in one sentence — or paste the chapter straight in. LessonPlay's
+agent designs the game, writes the code in a sandbox, plays it to a win to prove it
+works, and hands back one link.
+
+It doesn't assume who you are. A student revising acids and bases on their own, a
+teacher building something for Monday, a parent helping with homework, or anyone
+curious why the reaction goes the way it does — same studio, same one link.
 
 **[Try it at lessonplay.space →](https://www.lessonplay.space)** — free while in beta, nothing to install.
 
-## What students actually get
+## What you get to play
 
 <table>
 <tr>
@@ -51,13 +57,13 @@ Not a quiz with a chemistry skin. Each game is a **cause-and-effect simulation**
 a consistent world the learner probes to identify an unknown salt, predict a
 reaction, or reach a target state.
 
-The loop is **Predict → Act → Observe → Reconcile**. Students pick a material,
-try a tool, and reason from what they see — *"classify the unknown from
-observations rather than its label."*
+The loop is **Predict → Act → Observe → Reconcile**. You pick a material, try a
+tool, and reason from what you see — *"classify the unknown from observations
+rather than its label."*
 
 Every game ships as one self-contained `index.html` (~0.3–1.5 MB). No install, no
-plugin, no account for the student. A teacher shares a link; it opens in any
-browser.
+plugin, no account, no sign-in to play. Keep the link or pass it on — it opens in
+any browser, on a phone as readily as a laptop.
 
 <sub>Pictured: <i>The Separation Station</i> — a real game built and published by the studio.</sub>
 
@@ -65,8 +71,8 @@ browser.
 </tr>
 </table>
 
-> **Status:** early. Chemistry chapters first, one game template, actively built
-> in the open. Expect sharp edges.
+> **Status:** early. Chemistry for classes 8–10 first, one game template, actively
+> built in the open. Expect sharp edges.
 
 ## Why it's interesting
 
@@ -90,21 +96,21 @@ So the interesting machinery here is the part that says *no*:
 
 ```mermaid
 flowchart TD
-    A["Teacher pastes a chapter"] --> B["Mastra agent<br/>(skills: plan → author)"]
+    A["Paste a chapter"] --> B["Mastra agent<br/>(skills: plan → author)"]
     B --> C["Daytona sandbox<br/>~/game on local disk"]
     C -->|bash · read · write · edit| C
     C --> D{"validate<br/>structural → quality → replay"}
     D -->|fails| C
     D -->|passes| E["publish<br/>test + build"]
     E --> F["Cloudflare R2<br/>versions/n.html → current/index.html"]
-    F --> G["One link for the class"]
+    F --> G["One link to play or share"]
 ```
 
 **The two storage halves.** `~/game` is local sandbox disk — where the agent
 builds and tests. `~/r2` is an s3fs mount of `games/<userId>/<threadId>/`. The
 `publish` tool is the only crossing between them, and it gates the crossing. Each
 publish keeps its own build, so an older version stays previewable while
-`current/` remains the stable link a teacher already shared.
+`current/` remains the stable link that was already shared.
 
 **The validation gate**, in order — each stage runs only when the last is clean:
 

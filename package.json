@@ -2,7 +2,7 @@
   "name": "lessonplay",
   "version": "0.1.0",
   "private": true,
-  "description": "Give it a chemistry chapter. Get a playable lab. An AI studio that writes, validates, and publishes chemistry learning games.",
+  "description": "Give it a chemistry chapter. Get a playable lab. An AI studio that writes, validates, and publishes playable chemistry games for classes 8-10.",
   "license": "Apache-2.0",
   "author": "Rishabh Singh",
   "homepage": "https://github.com/builtbyrishabh/lessonplay#readme",
