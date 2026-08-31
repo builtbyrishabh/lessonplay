@@ -70,10 +70,15 @@ next/font puts `--font-geist-sans` on `<body>` (next-themes owns `<html>`'s clas
 to guaranteed-invalid and everything falls back to Times New Roman.
 - `src/app/(app)/` — route group wrapped in `AppShell` (collapsible sidebar); sign-in/up stay bare.
 - `src/app/(marketing)/` — the PUBLIC pages: the homepage at `/` plus `/privacy` and
-  `/terms` (with sign-in/up, the only non-auth routes; see `middleware.ts`). The legal
+  `/terms` (with sign-in/up, the only non-auth PAGES; see `middleware.ts`). The legal
   pages must stay public — Google's OAuth review fetches them signed-out, and a redirect
   to sign-in reads to it as a broken link. Own bare layout, statically prerendered,
-  sections in `components/marketing/`; the two legal pages share `marketing/legal.tsx`. Its hero composer hands the prompt to the studio as
+  sections in `components/marketing/`; the two legal pages share `marketing/legal.tsx`.
+  Crawler surface: `app/robots.ts`, `app/sitemap.ts` and `(marketing)/opengraph-image.tsx`,
+  all pointed at `SITE_URL` (`lib/site.ts`) — `www`, because Vercel 308s the apex to it.
+  The middleware matcher SKIPS all three (`txt|xml` by extension, `opengraph-image` by
+  name): they are fetched session-less, and gating them costs a redirect where a crawler
+  expects a file plus an invocation per hit. Its hero composer hands the prompt to the studio as
   `/chats?q=…` (through a `redirect_url` sign-up hop when signed out); `chats/page.tsx`
   reads `q` into the composer once and drops it from the URL.
   Marketing-only design tokens (`--lp-*`) live at the end of `globals.css` — `--lp-violet`

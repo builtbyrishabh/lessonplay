@@ -8,9 +8,13 @@ import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { SITE_URL } from "~/lib/site";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
+  // Every `og:image` and canonical Next generates is resolved against this, so
+  // without it the social card ships a relative URL that no crawler can fetch.
+  metadataBase: new URL(SITE_URL),
   title: "LessonPlay",
   description: "Give it a chemistry chapter. Get a playable lab.",
 };

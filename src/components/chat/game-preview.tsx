@@ -117,7 +117,11 @@ export function GamePreview({
         // Remounts on demand so "reload" genuinely restarts the game rather
         // than relying on the iframe's own history.
         key={`${current.version}-${reloadKey}`}
-        className="min-h-0 w-full flex-1 border-0 bg-white"
+        // The game viewport is a fixed 9:16 column (430px cap) and the game
+        // paints no background outside it, so this colour IS the letterbox on
+        // either side. Black reads as a stage rather than as unstyled page, and
+        // holds in both themes; the frame supplies its own surface either way.
+        className="min-h-0 w-full flex-1 border-0 bg-black"
         // Note the omission of allow-same-origin. Every user's game is served
         // from the SAME r2.dev origin, so with it one game could read another
         // game's localStorage; without it each preview gets an opaque origin
