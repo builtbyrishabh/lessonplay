@@ -56,7 +56,7 @@ representing the community in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the maintainers privately via
-[GitHub's report form](https://github.com/builtbyrishabh/lessonplay-mastra/security/advisories/new)
+[GitHub's report form](https://github.com/builtbyrishabh/lessonplay/security/advisories/new)
 or by direct message to [@builtbyrishabh](https://github.com/builtbyrishabh).
 
 All complaints will be reviewed and investigated promptly and fairly. Maintainers

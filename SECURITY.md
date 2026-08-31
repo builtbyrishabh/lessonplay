@@ -5,7 +5,7 @@
 **Please do not open a public issue for security problems.**
 
 Report privately through GitHub:
-[**Report a vulnerability**](https://github.com/builtbyrishabh/lessonplay-mastra/security/advisories/new)
+[**Report a vulnerability**](https://github.com/builtbyrishabh/lessonplay/security/advisories/new)
 — this opens a private advisory visible only to maintainers.
 
 Expect an acknowledgement within 72 hours and an assessment within a week.

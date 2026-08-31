@@ -16,7 +16,7 @@ simulation — and proves it's winnable before anyone can share it.
 
 <p>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
-  <a href="https://github.com/builtbyrishabh/lessonplay-mastra/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/builtbyrishabh/lessonplay-mastra/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/builtbyrishabh/lessonplay/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/builtbyrishabh/lessonplay/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Next.js 15" src="https://img.shields.io/badge/Next.js-15-black?logo=next.js">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript&logoColor=white">
   <a href="CONTRIBUTING.md"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
@@ -128,8 +128,8 @@ Next.js App Router · tRPC · Drizzle + Postgres · Clerk · Tailwind v4 ·
 **Prerequisites:** Node 20+, pnpm 10+, Docker (for local Postgres).
 
 ```bash
-git clone https://github.com/builtbyrishabh/lessonplay-mastra.git
-cd lessonplay-mastra
+git clone https://github.com/builtbyrishabh/lessonplay.git
+cd lessonplay
 pnpm install
 
 cp .env.example .env      # then fill in the keys below
@@ -218,7 +218,7 @@ PG_INTEGRATION=1 DATABASE_URL=... npx vitest run chats.pg   # real Postgres
 
 ## Contributing
 
-Good first issues are labelled [`good first issue`](https://github.com/builtbyrishabh/lessonplay-mastra/labels/good%20first%20issue).
+Good first issues are labelled [`good first issue`](https://github.com/builtbyrishabh/lessonplay/labels/good%20first%20issue).
 The areas most open to help right now:
 
 - **New game templates** beyond chemistry — the engine is domain-agnostic by design

@@ -5,13 +5,13 @@
   "description": "Give it a chemistry chapter. Get a playable lab. An AI studio that writes, validates, and publishes chemistry learning games.",
   "license": "Apache-2.0",
   "author": "Rishabh Singh",
-  "homepage": "https://github.com/builtbyrishabh/lessonplay-mastra#readme",
+  "homepage": "https://github.com/builtbyrishabh/lessonplay#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/builtbyrishabh/lessonplay-mastra.git"
+    "url": "git+https://github.com/builtbyrishabh/lessonplay.git"
   },
   "bugs": {
-    "url": "https://github.com/builtbyrishabh/lessonplay-mastra/issues"
+    "url": "https://github.com/builtbyrishabh/lessonplay/issues"
   },
   "keywords": [
     "education",
