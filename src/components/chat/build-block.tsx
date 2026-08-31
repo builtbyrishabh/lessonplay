@@ -18,6 +18,11 @@ import {
   SpinnerIcon,
 } from "~/lib/icons";
 import type { MessagePart } from "~/lib/message-groups";
+import {
+  failureOf,
+  stringField,
+  type ToolPartLike,
+} from "~/lib/tool-parts";
 import { cn } from "~/lib/utils";
 
 /**
@@ -33,37 +38,6 @@ import { cn } from "~/lib/utils";
  * Streamdown the prose uses, so it looks like code the assistant said rather
  * than a second editor.
  */
-
-type ToolPartLike = {
-  type: string;
-  state?: string;
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-};
-
-function stringField(input: unknown, key: string): string | undefined {
-  if (typeof input !== "object" || input === null) return undefined;
-  const value = (input as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function failureOf(part: ToolPartLike): string | null {
-  if (part.errorText) return part.errorText;
-  if (part.state === "output-error") return "failed";
-  const output = part.output;
-  if (typeof output === "object" && output !== null) {
-    const record = output as Record<string, unknown>;
-    if (record.ok === false) {
-      return (
-        (typeof record.message === "string" && record.message) ||
-        (typeof record.error === "string" && record.error) ||
-        "failed"
-      );
-    }
-  }
-  return null;
-}
 
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;

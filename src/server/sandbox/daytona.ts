@@ -112,7 +112,3 @@ export async function getOrCreateSandbox(
   });
   return { sandbox, status: "created" };
 }
-
-// Re-exported so existing callers keep importing it from here; the
-// implementation lives in ./exec.ts, which is free of `~/env`.
-export { runCommand } from "./exec";

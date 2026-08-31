@@ -17,8 +17,6 @@ import type { FileUIPart } from "ai";
 
 import type { ChatSeed } from "~/lib/chat-seed";
 import { deriveGameFiles, type GameFilesState } from "~/lib/game-files";
-import { useSettings } from "~/lib/hooks/use-settings";
-import { lpMark } from "~/lib/perf";
 import { api } from "~/trpc/react";
 
 /**
@@ -68,17 +66,8 @@ export function ChatProvider({
 }) {
   const router = useRouter();
   const utils = api.useUtils();
-  const { settings } = useSettings();
   const hadTitleRef = useRef(initialMessages.length > 0);
   const sentPendingRef = useRef(false);
-  // Only instrument the home → first-message path (a thread we arrived at with
-  // a seed), never an existing thread opened from the sidebar.
-  const measuringRef = useRef(false);
-  const userPaintRef = useRef(false);
-  const firstTokenRef = useRef(false);
-  // Read through a ref so `send` does not change identity when the model does.
-  const modelRef = useRef(settings.model);
-  modelRef.current = settings.model;
 
   const { messages, sendMessage, status, stop, error } = useChat({
     id: threadId,
@@ -106,22 +95,15 @@ export function ChatProvider({
 
   // The one place a user message goes on the wire. Attachments ride as file
   // parts carrying the uploaded file's URL; the route passes them to the agent
-  // untouched and the AI Gateway fetches them for the model.
-  const dispatch = useCallback(
-    (text: string, files: FileUIPart[]) => {
-      void sendMessage({ text, files }, { body: { model: modelRef.current } });
-    },
-    [sendMessage],
-  );
-
-  // Stable identity: the context value is memoised, and a `send` that changed
-  // every render would re-render both panes on every streamed token. Files
-  // arrive already uploaded (PromptBox uploads on attach), so this just fires.
+  // untouched and the AI Gateway fetches them for the model. Stable identity:
+  // the context value is memoised, and a `send` that changed every render
+  // would re-render both panes on every streamed token. Files arrive already
+  // uploaded (PromptBox uploads on attach), so this just fires.
   const send = useCallback(
     (text: string, files: FileUIPart[] = []) => {
-      dispatch(text, files);
+      void sendMessage({ text, files });
     },
-    [dispatch],
+    [sendMessage],
   );
 
   // First prompt seeded from the home surface. Its files were uploaded there as
@@ -130,34 +112,9 @@ export function ChatProvider({
   useEffect(() => {
     if (sentPendingRef.current || !seed) return;
     sentPendingRef.current = true;
-    measuringRef.current = true;
-    lpMark("provider-mount");
-    lpMark("dispatch");
-    dispatch(seed.text, seed.files);
+    send(seed.text, seed.files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId]);
-
-  // Paint marks for the perf trace: when the user's own bubble first hits the
-  // DOM, and when the first assistant token renders. Gated to the measured
-  // home→first-message path so opening an old thread doesn't log noise.
-  useEffect(() => {
-    if (!measuringRef.current) return;
-    if (!userPaintRef.current && messages.some((m) => m.role === "user")) {
-      userPaintRef.current = true;
-      requestAnimationFrame(() => lpMark("user-paint"));
-    }
-    if (
-      !firstTokenRef.current &&
-      messages.some(
-        (m) =>
-          m.role === "assistant" &&
-          m.parts.some((p) => p.type === "text" && p.text.length > 0),
-      )
-    ) {
-      firstTokenRef.current = true;
-      lpMark("first-token");
-    }
-  }, [messages]);
 
   const gameFiles = useMemo(() => deriveGameFiles(messages), [messages]);
 

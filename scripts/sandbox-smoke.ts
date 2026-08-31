@@ -21,8 +21,8 @@ import {
 import {
   getDaytonaClient,
   getOrCreateSandbox,
-  runCommand,
 } from "../src/server/sandbox/daytona";
+import { runCommand } from "../src/server/sandbox/exec";
 import { mountR2Bucket } from "../src/server/sandbox/r2-mount";
 import { hydrateScript, publishScript } from "../src/server/sandbox/scripts";
 

@@ -68,14 +68,6 @@ export async function uploadFile(
   };
 }
 
-/** Upload several files, preserving order. Rejects if any one fails. */
-export async function uploadFiles(
-  threadId: string,
-  files: File[],
-): Promise<UploadedFile[]> {
-  return Promise.all(files.map((file) => uploadFile(threadId, file)));
-}
-
 /**
  * Turn uploaded files into AI SDK file parts — the shape `sendMessage({ files })`
  * expects. The chat route hands the message to Mastra untouched, and the AI

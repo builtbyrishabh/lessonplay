@@ -1,5 +1,3 @@
-import type { Scenario, ValidationResult } from "./scenario";
-
 export const STATION_VISUAL_KINDS = [
   "test-tube",
   "beaker",
@@ -73,67 +71,3 @@ export interface StationVisual {
   readonly effectTags?: readonly GuidedLabEffectTag[];
 }
 
-export interface GuidedLabMissionPresentation {
-  readonly scenarioId: string;
-  readonly badge?: string;
-  readonly stationVisuals: readonly StationVisual[];
-  readonly completionMessage?: string;
-}
-
-export interface GuidedLabMission {
-  readonly scenario: Scenario;
-  readonly presentation: GuidedLabMissionPresentation;
-}
-
-export interface GuidedLabGame {
-  readonly title: string;
-  readonly eyebrow?: string;
-  readonly missions: readonly GuidedLabMission[];
-}
-
-const stationVisualKinds = new Set<string>(STATION_VISUAL_KINDS);
-const effectTags = new Set<string>(GUIDED_LAB_EFFECT_TAGS);
-
-export function validateGuidedLabPresentation(
-  scenario: Scenario,
-  presentation: GuidedLabMissionPresentation,
-): ValidationResult {
-  const errors: string[] = [];
-
-  if (presentation.scenarioId !== scenario.id) {
-    errors.push(
-      `presentation.scenarioId "${presentation.scenarioId}" must match scenario "${scenario.id}"`,
-    );
-  }
-
-  if (!presentation.stationVisuals.length) {
-    errors.push("presentation.stationVisuals must include at least one station");
-  }
-
-  const scenarioStations = new Set(Object.keys(scenario.stations));
-  const seenStations = new Set<string>();
-
-  for (const visual of presentation.stationVisuals) {
-    if (!scenarioStations.has(visual.stationId)) {
-      errors.push(
-        `station visual "${visual.stationId}" does not exist in scenario.stations`,
-      );
-    }
-    if (seenStations.has(visual.stationId)) {
-      errors.push(`station visual "${visual.stationId}" is duplicated`);
-    }
-    seenStations.add(visual.stationId);
-
-    if (!stationVisualKinds.has(visual.kind)) {
-      errors.push(`station visual "${visual.stationId}" uses unknown kind "${visual.kind}"`);
-    }
-
-    for (const tag of visual.effectTags ?? []) {
-      if (!effectTags.has(tag)) {
-        errors.push(`station visual "${visual.stationId}" uses unknown effect tag "${tag}"`);
-      }
-    }
-  }
-
-  return { ok: errors.length === 0, errors };
-}

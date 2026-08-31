@@ -8,7 +8,6 @@ import { ChatWorkspace } from "~/components/chat/chat-workspace";
 import { SidebarToggleButton } from "~/components/layout/app-shell";
 import { PromptBox } from "~/components/prompt-box";
 import { type ChatSeed } from "~/lib/chat-seed";
-import { lpMark } from "~/lib/perf";
 import { newThreadId } from "~/lib/thread-id";
 import { api } from "~/trpc/react";
 
@@ -55,7 +54,6 @@ function ChatsHarness() {
   // dispatches the first message with nothing on the critical path.
   const startChat = (text: string, files: FileUIPart[]) => {
     const threadId = draftThreadId;
-    lpMark("submit");
 
     // Set synchronously, before the `?id=` flip below, so the seed is already
     // in state on the first render that shows the conversation — no gap frame.
@@ -68,7 +66,6 @@ function ChatsHarness() {
       ...(prev ?? []),
     ]);
 
-    lpMark("navigate");
     // Shallow by default: the URL changes, this page stays mounted, no RSC.
     void setActiveId(threadId);
     if (seedPrompt !== null) void setSeedPrompt(null);

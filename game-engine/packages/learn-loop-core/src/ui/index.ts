@@ -7,19 +7,7 @@
  */
 
 export { Stage, type StageProps } from "./Stage";
-export { ToolTray, type ToolTrayProps } from "./ToolTray";
-export {
-  StepCounter,
-  CuePanel,
-  ResultPanel,
-  CompletePanel,
-} from "./panels";
 export { titleCase } from "./titleCase";
-export { useGuidedSession, type GuidedSession } from "./useGuidedSession";
-export {
-  GuidedLabViewport,
-  type GuidedLabViewportProps,
-} from "./GuidedLabViewport";
 export {
   SandboxLabViewport,
   type SandboxLabViewportProps,

@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { ENGINE_ROOT } from "~/lib/sandbox-paths";
-import { runCommand } from "./daytona";
+import { runCommand } from "./exec";
 
 const ENGINE_SOURCE = path.resolve(process.cwd(), "game-engine");
 

@@ -38,22 +38,6 @@ function r2(): S3Client {
   return client;
 }
 
-/** Write one object to the games bucket. Key is computed by the caller. */
-export async function putObject(
-  key: string,
-  body: Uint8Array,
-  contentType: string,
-): Promise<void> {
-  await r2().send(
-    new PutObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    }),
-  );
-}
-
 /**
  * Public URL for a key, or null when no public base is configured.
  *

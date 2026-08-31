@@ -1,5 +1,4 @@
 import type { ExperimentGame } from "../model/experimentLab";
-import type { ValidationResult } from "../model/scenario";
 import {
   createExperimentSession,
   reduceExperimentSession,
@@ -110,12 +109,4 @@ export function replayExperimentGame(
   }
 
   return { ok: errors.length === 0, levelsCompleted, errors };
-}
-
-/** {@link replayExperimentGame} folded into the shared validation shape. */
-export function replayExperimentGameResult(
-  game: ExperimentGame,
-): ValidationResult {
-  const { ok, errors } = replayExperimentGame(game);
-  return { ok, errors };
 }

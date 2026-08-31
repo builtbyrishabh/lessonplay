@@ -19,13 +19,6 @@ export const R2_CURRENT_DIR = `${R2_ROOT}/current`;
 /** Append-only source snapshots, one numbered directory per publish. */
 export const R2_VERSIONS_DIR = `${R2_ROOT}/versions`;
 /**
- * Teacher-supplied source material (a chapter PDF, an activity sheet). Written
- * by the app's upload route straight into R2, so it shows up here the moment
- * the sandbox mounts — the agent reads it, nothing writes it from inside.
- */
-export const R2_UPLOADS_DIR = `${R2_ROOT}/uploads`;
-
-/**
  * The engine monorepo: @learn-loop/core, the game templates, and the 102
  * hoisted packages. Not a staging area — GAME_ROOT/node_modules symlinks into
  * this one, so it is the dependency root for every build.

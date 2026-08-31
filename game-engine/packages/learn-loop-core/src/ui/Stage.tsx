@@ -2,7 +2,7 @@
  * The three-layer **Stage** compositor — domain-agnostic.
  *
  * Every guided-sim game paints its bench in three stacked layers that must share
- * one coordinate system (see `computeStationLayout`): a static `backdrop` (SVG
+ * one coordinate system: a static `backdrop` (SVG
  * scenery), an animated middle layer (`children` — typically a Canvas), and a
  * static `foreground` (SVG apparatus / captions). This component owns only the
  * `.stage` box and the back-to-front stacking order; it knows nothing about what
