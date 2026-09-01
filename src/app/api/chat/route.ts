@@ -74,12 +74,21 @@ export async function POST(req: Request) {
   // inside a tool, if the model ever calls one.
   const trace = { id: traceId, log };
   const sandboxPromise = prepareLessonSandbox({ threadId, userId, trace });
+  // Handed to the tools for when the container dies between the lifecycle
+  // check and a command (auto-stop/archive racing the request). A full
+  // re-prepare rather than a bare restart, because the R2 mount does not
+  // survive the container; prepareLessonSandbox is idempotent.
+  const recoverSandbox = () => {
+    log("sandbox.recover", { threadId });
+    return prepareLessonSandbox({ threadId, userId, trace });
+  };
 
   const agent = await createLessonAgent({
     threadId,
     userId,
     model,
     sandboxPromise,
+    recoverSandbox,
     // Stable for the life of the thread: /play proxies current/index.html,
     // the one key every publish overwrites, so the teacher's link never
     // changes. The app route rather than the bucket URL on purpose — the raw

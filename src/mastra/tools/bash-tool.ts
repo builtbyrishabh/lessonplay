@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { ENGINE_ROOT, GAME_ROOT } from "~/lib/sandbox-paths";
 import { runCommand } from "~/server/sandbox/exec";
+import { withRecoveredSandbox } from "~/server/sandbox/lifecycle";
 import type { LessonTrace } from "~/mastra/agents/lesson-shared";
 
 /** Beyond this the output goes to a file and the model gets a pointer. */
@@ -18,6 +19,8 @@ export type CreateBashToolOptions = {
    * still booting/mounting; the first `bash` call pays whatever is left.
    */
   sandboxPromise: Promise<Sandbox>;
+  /** Re-runs the full sandbox preparation if the container died. See lifecycle.ts. */
+  recoverSandbox?: () => Promise<Sandbox>;
   /** Extra env for every command (on top of the sandbox's own envVars). */
   env?: Record<string, string>;
   trace?: LessonTrace;
@@ -39,6 +42,7 @@ async function spillToFile(sandbox: Sandbox, output: string): Promise<string> {
  */
 export function createBashTool({
   sandboxPromise,
+  recoverSandbox,
   env,
   trace,
 }: CreateBashToolOptions) {
@@ -92,38 +96,43 @@ export function createBashTool({
 
       try {
         // The only await on the sandbox — by now it is usually already warm.
-        const sandbox = await sandboxPromise;
-        const res = await runCommand(sandbox, command, {
-          cwd: GAME_ROOT,
-          env,
-          timeoutSeconds,
-        });
+        return await withRecoveredSandbox(
+          sandboxPromise,
+          recoverSandbox,
+          async (sandbox) => {
+            const res = await runCommand(sandbox, command, {
+              cwd: GAME_ROOT,
+              env,
+              timeoutSeconds,
+            });
 
-        const truncated = res.stdout.length > MAX_OUTPUT_CHARS;
-        const outputPath = truncated
-          ? await spillToFile(sandbox, res.stdout)
-          : undefined;
-        const durationMs = Math.round(performance.now() - startedAt);
+            const truncated = res.stdout.length > MAX_OUTPUT_CHARS;
+            const outputPath = truncated
+              ? await spillToFile(sandbox, res.stdout)
+              : undefined;
+            const durationMs = Math.round(performance.now() - startedAt);
 
-        trace?.log("tool.bash.end", {
-          command,
-          exitCode: res.exitCode,
-          outputChars: res.stdout.length,
-          truncated,
-          outputPath,
-          durationMs,
-        });
+            trace?.log("tool.bash.end", {
+              command,
+              exitCode: res.exitCode,
+              outputChars: res.stdout.length,
+              truncated,
+              outputPath,
+              durationMs,
+            });
 
-        return {
-          output: truncated
-            ? `${res.stdout.slice(0, MAX_OUTPUT_CHARS)}\n\n[truncated: ${res.stdout.length} chars total; full output at ${outputPath}]`
-            : res.stdout,
-          exitCode: res.exitCode,
-          durationMs,
-          truncated,
-          outputChars: res.stdout.length,
-          outputPath,
-        };
+            return {
+              output: truncated
+                ? `${res.stdout.slice(0, MAX_OUTPUT_CHARS)}\n\n[truncated: ${res.stdout.length} chars total; full output at ${outputPath}]`
+                : res.stdout,
+              exitCode: res.exitCode,
+              durationMs,
+              truncated,
+              outputChars: res.stdout.length,
+              outputPath,
+            };
+          },
+        );
       } catch (err) {
         // Sandbox never came up, or the SDK call itself failed. Hand the model
         // a readable failure instead of killing the step.

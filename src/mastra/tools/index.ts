@@ -12,6 +12,12 @@ export type SandboxToolOptions = {
   /** Un-awaited on purpose — see `~/server/sandbox/prepare`. */
   sandboxPromise: Promise<Sandbox>;
   /**
+   * Re-runs the full sandbox preparation (start + R2 mount + hydrate) when
+   * the container dies under a tool call — auto-stop or archive racing a
+   * request. Supplied by the route; omitted in tests.
+   */
+  recoverSandbox?: () => Promise<Sandbox>;
+  /**
    * Where this thread's published game will be readable. Computed by the
    * caller (it needs env) and handed down, so nothing under `tools/` has to
    * import `~/env` and the whole set stays unit-testable.

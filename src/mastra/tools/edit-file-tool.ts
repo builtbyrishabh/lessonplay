@@ -4,9 +4,12 @@ import { z } from "zod";
 
 import { expandSandboxPath } from "~/lib/sandbox-paths";
 import type { LessonTrace } from "~/mastra/agents/lesson-shared";
+import { withRecoveredSandbox } from "~/server/sandbox/lifecycle";
 
 export type CreateEditFileToolOptions = {
   sandboxPromise: Promise<Sandbox>;
+  /** Re-runs the full sandbox preparation if the container died. See lifecycle.ts. */
+  recoverSandbox?: () => Promise<Sandbox>;
   trace?: LessonTrace;
 };
 
@@ -23,6 +26,7 @@ function errorMessage(err: unknown): string {
  */
 export function createEditFileTool({
   sandboxPromise,
+  recoverSandbox,
   trace,
 }: CreateEditFileToolOptions) {
   return createTool({
@@ -59,43 +63,47 @@ export function createEditFileTool({
       }
 
       try {
-        const sandbox = await sandboxPromise;
+        return await withRecoveredSandbox(
+          sandboxPromise,
+          recoverSandbox,
+          async (sandbox) => {
+            const details = await sandbox.fs.getFileDetails(path).catch(() => null);
+            if (!details || details.isDir) {
+              return {
+                ok: false,
+                path,
+                error: `No file at "${input}". Check the path, or use write to create it.`,
+              };
+            }
 
-        const details = await sandbox.fs.getFileDetails(path).catch(() => null);
-        if (!details || details.isDir) {
-          return {
-            ok: false,
-            path,
-            error: `No file at "${input}". Check the path, or use write to create it.`,
-          };
-        }
+            const content = (await sandbox.fs.downloadFile(path)).toString("utf-8");
+            const occurrences = content.split(old_string).length - 1;
 
-        const content = (await sandbox.fs.downloadFile(path)).toString("utf-8");
-        const occurrences = content.split(old_string).length - 1;
+            if (occurrences === 0) {
+              return {
+                ok: false,
+                path,
+                error: `old_string was not found in "${input}". Read the file and copy the exact text — including indentation — you want to replace.`,
+              };
+            }
+            if (occurrences > 1 && !replace_all) {
+              return {
+                ok: false,
+                path,
+                error: `old_string matches ${occurrences} times in "${input}", so the edit is ambiguous. Add surrounding context to make it unique, or set replace_all=true.`,
+              };
+            }
 
-        if (occurrences === 0) {
-          return {
-            ok: false,
-            path,
-            error: `old_string was not found in "${input}". Read the file and copy the exact text — including indentation — you want to replace.`,
-          };
-        }
-        if (occurrences > 1 && !replace_all) {
-          return {
-            ok: false,
-            path,
-            error: `old_string matches ${occurrences} times in "${input}", so the edit is ambiguous. Add surrounding context to make it unique, or set replace_all=true.`,
-          };
-        }
+            const updated = replace_all
+              ? content.split(old_string).join(new_string)
+              : content.replace(old_string, new_string);
+            await sandbox.fs.uploadFile(Buffer.from(updated, "utf-8"), path);
 
-        const updated = replace_all
-          ? content.split(old_string).join(new_string)
-          : content.replace(old_string, new_string);
-        await sandbox.fs.uploadFile(Buffer.from(updated, "utf-8"), path);
-
-        const replacements = replace_all ? occurrences : 1;
-        trace?.log("tool.edit", { path, replacements });
-        return { ok: true, path, replacements };
+            const replacements = replace_all ? occurrences : 1;
+            trace?.log("tool.edit", { path, replacements });
+            return { ok: true, path, replacements };
+          },
+        );
       } catch (err) {
         const message = errorMessage(err);
         trace?.log("tool.edit.error", { path, error: message });
