@@ -101,7 +101,7 @@ const DEFAULT_TOPIC =
 const topic = process.argv[2]?.trim() || DEFAULT_TOPIC;
 const threadId = process.argv[3]?.trim() || `e2e-acids-bases-01`;
 const userId = "e2e-user";
-const model = resolveLessonModel(undefined); // repo default (GPT 5.6 Luna)
+const model = resolveLessonModel(undefined); // repo default (GLM 5.3 Flash)
 
 // A real chat is many turns; a request is capped at LESSON_MAX_STEPS. Here we
 // want one autonomous build, so we give a generous per-turn step budget and, as
