@@ -62,6 +62,22 @@ export async function latestGameVersion(threadId: string, userId: string) {
   return row ?? null;
 }
 
+/**
+ * The newest version by thread id alone — for the public /play route, where
+ * there is no signed-in user to filter on. The thread id is an unguessable
+ * UUID and the row is only ever used to locate the built game in the bucket,
+ * so this widens what a share link serves, not what a stranger can enumerate.
+ */
+export async function latestGameVersionByThread(threadId: string) {
+  const [row] = await db
+    .select()
+    .from(gameVersions)
+    .where(eq(gameVersions.threadId, threadId))
+    .orderBy(desc(gameVersions.version))
+    .limit(1);
+  return row ?? null;
+}
+
 /** Every version of a thread's game, newest first. */
 export async function listGameVersions(threadId: string, userId: string) {
   return db
