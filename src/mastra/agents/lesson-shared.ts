@@ -9,7 +9,7 @@
  * app to one model — stored settings and request bodies naming a removed model
  * fall back to the default rather than erroring.
  *
- * Currently OpenAI GPT 5.6 Luna only, and the composer no longer offers a
+ * Currently z.ai GLM 5.3 Flash only, and the composer no longer offers a
  * picker. Re-enabling choice means adding entries here, restoring a dropdown
  * in `prompt-box.tsx`, and sending the choice as `model` in the chat request
  * body — the route still runs `resolveLessonModel(body.model)`, so the server
@@ -17,9 +17,9 @@
  */
 export const LESSON_MODELS = [
   {
-    id: "vercel/openai/gpt-5.6-luna",
-    label: "GPT 5.6 Luna",
-    description: "Default. Thinks it through.",
+    id: "vercel/zai/glm-5.3-flash",
+    label: "GLM 5.3 Flash",
+    description: "Default. Fast and to the point.",
   },
 ] as const;
 
