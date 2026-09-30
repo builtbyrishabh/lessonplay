@@ -63,8 +63,11 @@ Next.js App Router + tRPC + Drizzle (Postgres) + Clerk + Tailwind, at the repo r
 Slice plan: 1) chatbot (threads, streaming, memory) → 2) sandbox + skills + engine
 tools + publish gate → 3) deploy.
 
-UI: ported from Vercel's v0-clone (`create-v0-sdk-app -e v0-clone`) onto shadcn (radix-nova)
-+ ai-elements. Geist font + geist-icons only (`src/lib/icons.ts`), next-themes.
+UI: built for LessonPlay with shadcn (radix-nova) + ai-elements, using Vercel's
+v0-clone as a frontend reference and adapting selected UI portions. Retained
+Vercel-derived UI code is attributed in `game-engine/NOTICE`; its Apache terms
+in `third-party/APACHE-2.0.txt` are not a project-wide LessonPlay license.
+Geist font + geist-icons only (`src/lib/icons.ts`), next-themes.
 next/font puts `--font-geist-sans` on `<body>` (next-themes owns `<html>`'s class), so
 `globals.css` re-declares `--font-sans`/`--font-mono` on `body` — at `:root` they resolve
 to guaranteed-invalid and everything falls back to Times New Roman.

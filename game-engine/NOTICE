@@ -7,14 +7,21 @@ This product includes software developed by third parties, as described below.
 Vercel v0 clone example
 --------------------------------------------------------------------------------
 
-The LessonPlay product application in `my-app/` began from Vercel's v0 clone
-example, licensed under the Apache License, Version 2.0.
+LessonPlay is a separately developed T3 application. Vercel's v0 clone example
+was used as a frontend reference, and selected UI implementation was adapted
+from it. Retained portions include the application shell, chat menus, prompt
+presentation, and AI Elements primitives under `src/components/`.
 
-    Copyright Vercel, Inc.
+Reference source:
+    https://github.com/vercel/v0-sdk/tree/76f01009d0cdc180a79e25d238e422b575c72acc/examples/v0-clone
+
+    Copyright 2025 Vercel, Inc.
     Licensed under the Apache License, Version 2.0.
 
-The current application has substantially replaced the original generation
-backend and product workflow, but portions of the original scaffolding remain.
+The Apache terms are retained in `third-party/APACHE-2.0.txt` at the repository
+root. This attribution applies to retained Vercel-derived UI portions. It does
+not describe LessonPlay's custom authentication, agent, sandbox, or publishing
+workflows as Vercel code, and does not grant a project-wide Apache license.
 
 --------------------------------------------------------------------------------
 abagames/claude-one-button-game-creation

@@ -242,14 +242,19 @@ retain the permissions granted under their original terms. Third-party component
 remain subject to their own licenses.
 
 Third-party attributions are retained in [`game-engine/NOTICE`](game-engine/NOTICE).
-The Apache 2.0 terms for Vercel-derived scaffolding are retained separately in
-[`third-party/APACHE-2.0.txt`](third-party/APACHE-2.0.txt).
+The Apache 2.0 terms retained in
+[`third-party/APACHE-2.0.txt`](third-party/APACHE-2.0.txt) apply to the retained
+Vercel-derived UI portions, not as a project-wide license for LessonPlay.
 
 The rule-engine pattern in `@learn-loop/core` is adapted from the MIT-licensed
 [chem_lab](https://github.com/nsriram/chem_lab); see
 [`NOTICE`](game-engine/packages/learn-loop-core/NOTICE) for the full attribution and
 [`LICENSE-chem_lab.txt`](game-engine/packages/learn-loop-core/LICENSE-chem_lab.txt)
 for its MIT terms.
-The studio UI is ported from Vercel's `v0-clone` example onto shadcn/ui.
+LessonPlay was built as a T3 application with its own authentication, agent,
+sandbox, and publishing workflows. Vercel's `v0-clone` example was a frontend
+reference; selected UI portions were adapted, including the shell, chat menus,
+prompt presentation, and AI Elements primitives. The Vercel attribution covers
+those retained portions, not the application as a whole.
 
 <div align="center"><sub>Built by <a href="https://github.com/builtbyrishabh">@builtbyrishabh</a> · <a href="https://www.lessonplay.space">lessonplay.space</a></sub></div>
