@@ -99,7 +99,7 @@ transcript excerpt — behaviour changes are hard to review from a diff alone.
 Use the issue templates. For anything security-related, follow
 [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
-## License
+## Contribution terms
 
-By contributing you agree that your contributions are licensed under the
-[Apache License 2.0](LICENSE).
+No project-wide contribution license is currently specified. Discuss the terms
+with the maintainer before submitting code.

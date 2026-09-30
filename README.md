@@ -6,7 +6,7 @@
 
 **Give it a chemistry chapter. Get a playable lab.**
 
-An open-source studio where an AI agent turns a chemistry chapter into a real, playable
+A studio where an AI agent turns a chemistry chapter into a real, playable
 simulation — and proves it's winnable before anyone plays it.
 
 Built for school chemistry, classes 8–10.
@@ -17,7 +17,6 @@ Built for school chemistry, classes 8–10.
 </p>
 
 <p>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
   <a href="https://github.com/builtbyrishabh/lessonplay/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/builtbyrishabh/lessonplay/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Next.js 15" src="https://img.shields.io/badge/Next.js-15-black?logo=next.js">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178c6?logo=typescript&logoColor=white">
@@ -234,13 +233,23 @@ The areas most open to help right now:
 Start with [CONTRIBUTING.md](CONTRIBUTING.md). Security issues go to
 [SECURITY.md](SECURITY.md), not the public tracker.
 
-## License
+## Copyright and third-party notices
 
-[Apache License 2.0](LICENSE) © 2026 Rishabh Singh.
+© 2026 Rishabh Singh.
+
+No project-wide license is offered for this revision. Previously licensed copies
+retain the permissions granted under their original terms. Third-party components
+remain subject to their own licenses.
+
+Third-party attributions are retained in [`game-engine/NOTICE`](game-engine/NOTICE).
+The Apache 2.0 terms for Vercel-derived scaffolding are retained separately in
+[`third-party/APACHE-2.0.txt`](third-party/APACHE-2.0.txt).
 
 The rule-engine pattern in `@learn-loop/core` is adapted from the MIT-licensed
 [chem_lab](https://github.com/nsriram/chem_lab); see
-[`NOTICE`](game-engine/packages/learn-loop-core/NOTICE) for the full attribution.
+[`NOTICE`](game-engine/packages/learn-loop-core/NOTICE) for the full attribution and
+[`LICENSE-chem_lab.txt`](game-engine/packages/learn-loop-core/LICENSE-chem_lab.txt)
+for its MIT terms.
 The studio UI is ported from Vercel's `v0-clone` example onto shadcn/ui.
 
 <div align="center"><sub>Built by <a href="https://github.com/builtbyrishabh">@builtbyrishabh</a> · <a href="https://www.lessonplay.space">lessonplay.space</a></sub></div>
