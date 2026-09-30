@@ -1,7 +1,6 @@
 {
   "name": "lessonplay-game-engine",
   "version": "0.0.0",
-  "license": "Apache-2.0",
   "private": true,
   "description": "Self-contained Learn Loop engine + reference template. Copied into the sandbox and installed there; not part of the web app's dependency graph.",
   "scripts": {

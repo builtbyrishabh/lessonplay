@@ -1,7 +1,6 @@
 {
   "name": "@learn-loop/core",
   "version": "0.1.0",
-  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "Domain-agnostic 'guided-sim' learning-game engine: the Predict → Observe → Explain loop, a first-match-wins rule engine with declarative transforms, a scenario validator, the session reducer, tap-gating, stage geometry, and (opt-in) React UI shells. Consumed source-only by member games via the workspace; not built to dist or published.",
